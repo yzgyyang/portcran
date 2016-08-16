@@ -135,7 +135,7 @@ class PortDependency(Dependency):
         self.condition = condition
 
     def __str__(self):
-        return "%s%s:%s/%s" % (self.port.pkgname, self.condition, self.port.category, self.port.name)
+        return "%s%s:%s" % (self.port.pkgname, self.condition, self.port.origin)
 
 class PortDepends(object):
     class Depends(object):
@@ -232,8 +232,8 @@ class Port(object):
         self.name = name
 
     @property
-    def category(self):
-        return self.categories[0]
+    def origin(self):
+        return "%s/%s" % (self.categories[0], self.pkgname)
 
     @property
     def pkgname(self):
