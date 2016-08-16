@@ -4,6 +4,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from abc import ABCMeta, abstractmethod
 from itertools import groupby
 from math import ceil, floor
+from operator import itemgetter
 from os import getuid
 from pwd import getpwuid
 from re import match
@@ -86,7 +87,7 @@ class PortVariable(PortValue):
         obj._values[self] = value
 
     def generate(self, value):
-        return (self.name, (value,))
+        return (self.name, (value,) if isinstance(value, (str, unicode)) else value)
 
 class PortObject(PortValue):
     def __init__(self, section, factory):
@@ -113,8 +114,19 @@ class PortDepends(object):
         return ("RUN_DEPENDS", ())
 
 class PortUses(object):
+    def __init__(self):
+        self._uses = {}
+
+    def add(self, name, args=()):
+        if name not in self._uses:
+            self._uses[name] = []
+        if isinstance(args, (str, unicode)):
+            self._uses[name].append(args)
+        else:
+            self._uses[name].extend(args)
+
     def generate(self):
-        return ("USES", ())
+        return ("USES", (k + (":" + ",".join(sorted(v)) if len(v) else "")  for k, v in sorted(self._uses.items(), itemgetter(0))))
 
 class PortException(Exception):
     pass
@@ -153,7 +165,7 @@ class Port(object):
     @staticmethod
     def _gen_header(makefile):
         makefile.writelines((
-            "# Created by: %s (%s)\n" % (Platform.fullname, Platform.address),
+            "# Created by: %s <%s>\n" % (Platform.fullname, Platform.address),
             "# $FreeBSD$\n",
         ))
 
@@ -182,7 +194,8 @@ class Port(object):
 class CranPort(Port):
     def __init__(self, name):
         super(CranPort, self).__init__(name)
-        self.categories = "math"
+        self.categories = ("math",)
+        self.uses.add("cran", "auto-plist")
 
 ignored_keys = [
         "Date",
@@ -228,7 +241,7 @@ def make_cran_port(name):
         elif key == "URL":
             pass
         elif key == "NeedsCompilation":
-            pass
+            port.uses.add("cran", "compiles")
         elif key not in ignored_keys:
             raise PortException("CRAN: package key %s unknown at line %s" % (key, line))
     return port
