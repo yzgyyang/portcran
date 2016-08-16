@@ -1,11 +1,27 @@
 #!/usr/bin/env python
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-import abc
-import getpass
-import re
-import socket
-import sys
+from abc import ABCMeta, abstractmethod
+from itertools import groupby
+from math import ceil, floor
+from os import getuid
+from pwd import getpwuid
+from re import match
+from socket import gethostname
+from StringIO import StringIO
 
+class Platform(object):
+    _passwd = getpwuid(getuid())
+    
+    address = "%s@%s" % (_passwd.pw_name, gethostname())
+    
+    fullname = _passwd.pw_gecos
+    
+    pagewidth = 80
+    
+    tabwidth = 8
+
+        
 class Stream(object):
     def __init__(self, objects):
         self._objects = list(objects)
@@ -31,7 +47,7 @@ class Stream(object):
             yield self.current
 
 class PortValue(object):
-    __metaclass__ = abc.ABCMeta
+    __metaclass__ = ABCMeta
 
     def __init__(self, section, order=1):
         self.order = order
@@ -48,7 +64,7 @@ class PortValue(object):
             return 1
         return 0
 
-    @abc.abstractmethod
+    @abstractmethod
     def generate(self, value):
         raise NotImplemented()
 
@@ -104,8 +120,8 @@ class Port(object):
     _values = {}
 
     name = PortVariable(1, 1, "PORTNAME")
-    version = PortVariable(1, 2, "DISTVERSION")
-    categories = PortVariable(1, 3, "CATEGORIES")
+    version = PortVariable(1, 4, "DISTVERSION")
+    categories = PortVariable(1, 8, "CATEGORIES")
 
     maintainer = PortVariable(2, 1, "MAINTAINER")
     comment = PortVariable(2, 2, "COMMENT")
@@ -118,19 +134,47 @@ class Port(object):
 
     def __init__(self, name):
         self.name = name
-        self.maintainer = "%s@%s" % (getpass.getuser(), socket.gethostname())
-
+        self.maintainer = Platform.address
+        
     def generate(self):
-        print "$FreeBSD$"
+        makefile = StringIO()
+        self._gen_header(makefile)
+        self._gen_sections(makefile)
+        self._gen_footer(makefile)
+        return makefile.getvalue()
+    
+    @staticmethod
+    def _gen_footer(makefile):
+        makefile.write("\n.include <bsd.port.mk>\n")
+                
+    @staticmethod
+    def _gen_header(makefile):
+        makefile.writelines((
+            "# Created by: %s (%s)\n" % (Platform.fullname, Platform.address),
+            "# $FreeBSD$\n",
+        ))
+        
+    def _gen_sections(self, makefile):
         items = list(self._values.items())
         items.sort(key=lambda i: i[0])
-        section = 0
-        for item in items:
-            portvalue = item[0]
-            if portvalue.section != section:
-                print
-                section = portvalue.section
-            print portvalue.generate(item[1])
+        for section, values in groupby(items, lambda i: i[0].section):
+            values = [v[0].generate(v[1]) for v in values]
+            tabs = max(2, int(ceil(max(len(n[0]) for n in values) + 1.0) / Platform.tabwidth))
+            makefile.write("\n")
+            for name, value in values:
+                makefile.write("%s=%s" % (name, "\t" * (tabs - int(floor((len(name) + 1.0) / Platform.tabwidth)))))
+                width = tabs * Platform.tabwidth
+                firstline = True
+                for v in value:
+                    if not firstline and width + len(v) > Platform.pagewidth:
+                        makefile.write(" \\\n")
+                    firstline = False
+                    makefile.write(v)
+                makefile.write("\n")
+    
+    @staticmethod
+    def _get_tabs(names):
+        return 
 
 class CranPort(Port):
     def __init__(self, name):
@@ -155,12 +199,12 @@ ignored_keys = [
 
 def make_cran_port(name):
     port = CranPort(name)
-    with open("/tmp/1/car/DESCRIPTION", "rU") as package:
+    with open("test/car/DESCRIPTION", "rU") as package:
         descr = Stream(l.rstrip('\n') for l in package.readlines())
     while descr.has_current:
         line = descr.current
         key, value = line.split(":", 1)
-        value = value.strip() + "".join(" " + l.strip() for l in descr.take_until(lambda l: re.match("^[a-zA-Z/@]+:", l)))
+        value = value.strip() + "".join(" " + l.strip() for l in descr.take_until(lambda l: match("^[a-zA-Z/@]+:", l)))
         if key == "Package":
             if port.name != value:
                 raise PortException("CRAN: package name (%s) does not match port name (%s)" % (value, port.name))
@@ -187,4 +231,4 @@ def make_cran_port(name):
     return port
 
 port = make_cran_port("car")
-port.generate()
+print(port.generate())
