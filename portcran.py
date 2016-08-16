@@ -8,20 +8,22 @@ from os import getuid
 from pwd import getpwuid
 from re import match
 from socket import gethostname
-from StringIO import StringIO
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 class Platform(object):
     _passwd = getpwuid(getuid())
-    
+
     address = "%s@%s" % (_passwd.pw_name, gethostname())
-    
+
     fullname = _passwd.pw_gecos
-    
+
     pagewidth = 80
-    
+
     tabwidth = 8
 
-        
 class Stream(object):
     def __init__(self, objects):
         self._objects = list(objects)
@@ -53,16 +55,17 @@ class PortValue(object):
         self.order = order
         self.section = section
 
-    def __cmp__(self, other):
-        if self.section < other.section:
-            return -1
-        if self.section > other.section:
-            return 1
-        if self.order < other.order:
-            return -1
-        if self.order > other.order:
-            return 1
-        return 0
+    def __eq__(self, other):
+        return self.__key() == other.__key()
+
+    def __hash__(self):
+        return hash(self.__key())
+
+    def __lt__(self, other):
+        return self.__key() < other.__key()
+
+    def __key(self):
+        return (self.section, self.order)
 
     @abstractmethod
     def generate(self, value):
@@ -135,25 +138,25 @@ class Port(object):
     def __init__(self, name):
         self.name = name
         self.maintainer = Platform.address
-        
+
     def generate(self):
         makefile = StringIO()
         self._gen_header(makefile)
         self._gen_sections(makefile)
         self._gen_footer(makefile)
         return makefile.getvalue()
-    
+
     @staticmethod
     def _gen_footer(makefile):
         makefile.write("\n.include <bsd.port.mk>\n")
-                
+
     @staticmethod
     def _gen_header(makefile):
         makefile.writelines((
             "# Created by: %s (%s)\n" % (Platform.fullname, Platform.address),
             "# $FreeBSD$\n",
         ))
-        
+
     def _gen_sections(self, makefile):
         items = list(self._values.items())
         items.sort(key=lambda i: i[0])
@@ -171,10 +174,10 @@ class Port(object):
                     firstline = False
                     makefile.write(v)
                 makefile.write("\n")
-    
+
     @staticmethod
     def _get_tabs(names):
-        return 
+        return
 
 class CranPort(Port):
     def __init__(self, name):
