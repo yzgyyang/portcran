@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import absolute_import, division, print_function
 
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
@@ -12,8 +12,8 @@ from socket import gethostname
 try:
     from StringIO import StringIO
 except ImportError:
-    from io import StringIO # type: ignore
-from typing import Any, Callable, Iterable, Set, Tuple, Union
+    from io import StringIO  # type: ignore
+from typing import Any, Callable, Dict, Iterable, List, Set, Tuple, Union
 
 
 class Orderable(object):
@@ -43,22 +43,22 @@ class Platform(object):
 
     address = "%s@%s" % (_passwd.pw_name, gethostname())
 
-    fullname = _passwd.pw_gecos
+    full_name = _passwd.pw_gecos
 
-    pagewidth = 80
+    page_width = 80
 
-    tabwidth = 8
+    tab_width = 8
 
 
 class Stream(object):
     def __init__(self, objects):
-        # type: (Iterable[unicode]) -> None
+        # type: (Iterable[str]) -> None
         self._objects = list(objects)
         self.line = 1
 
     @property
     def current(self):
-        # type: () -> unicode
+        # type: () -> str
         return self._objects[self.line - 1]
 
     @property
@@ -75,7 +75,7 @@ class Stream(object):
         return False
 
     def take_until(self, condition):
-        # type: (Callable[[unicode], bool]) -> Iterable[unicode]
+        # type: (Callable[[str], bool]) -> Iterable[str]
         while self.next() and not condition(self.current):
             yield self.current
 
@@ -96,7 +96,7 @@ class PortValue(Orderable):
 
     @abstractmethod
     def generate(self, value):
-        # type: (Any) -> Iterable[Tuple[unicode, Iterable[unicode]]]
+        # type: (Any) -> Iterable[Tuple[str, Iterable[str]]]
         raise NotImplementedError()
 
     def key(self):
@@ -106,27 +106,27 @@ class PortValue(Orderable):
 
 class PortVar(PortValue):
     def __init__(self, section, order, name):
-        # type: (int, int, unicode) -> None
+        # type: (int, int, str) -> None
         super(PortVar, self).__init__(section, order)
         self.name = name
 
     def __get__(self, obj, objtype):
-        # type: (Port, type) -> Union[unicode, List[unicode]]
+        # type: (Port, type) -> Union[str, List[str]]
         assert issubclass(objtype, Port)
         value = obj.get_value(self) if obj.has_value(self) else None
-        assert isinstance(value, unicode)
+        assert isinstance(value, str)
         value = obj.uses.get_variable(self.name, value)
         if value is None:
             raise PortException("Port: port variable not set: %s" % self.name)
         return value
 
     def __set__(self, obj, value):
-        # type: (Port, Union[unicode, List[unicode]]) -> None
+        # type: (Port, Union[str, List[str]]) -> None
         obj.set_value(self, value)
 
     def generate(self, value):
-        # type: (Union[unicode, List[unicode]]) -> Iterable[Tuple[unicode, Iterable[unicode]]]
-        return (self.name, (value,) if isinstance(value, unicode) else value), # type: ignore
+        # type: (Union[str, List[str]]) -> Iterable[Tuple[str, Iterable[str]]]
+        return (self.name, (value,) if isinstance(value, str) else value),  # type: ignore
 
 
 class PortObj(PortValue):
@@ -145,7 +145,7 @@ class PortObj(PortValue):
         return value
 
     def generate(self, value):
-        # type: (PortObject) -> Iterable[Tuple[unicode, Iterable[unicode]]]
+        # type: (PortObject) -> Iterable[Tuple[str, Iterable[str]]]
         return value.generate()
 
 
@@ -154,7 +154,7 @@ class PortObject(object):
 
     @abstractmethod
     def generate(self):
-        # type: () -> Iterable[Tuple[unicode, Iterable[unicode]]]
+        # type: () -> Iterable[Tuple[str, Iterable[str]]]
         raise NotImplementedError()
 
 
@@ -162,14 +162,14 @@ class PortLicense(PortObject):
     def __init__(self):
         # type: () -> None
         super(PortLicense, self).__init__()
-        self._licenses = set() # type: Set[unicode]
+        self._licenses = set()  # type: Set[str]
 
     def add(self, license_type):
-        # type: (unicode) -> None
+        # type: (str) -> None
         self._licenses.add(license_type)
 
     def generate(self):
-        # type: () -> Iterable[Tuple[unicode, Iterable[unicode]]]
+        # type: () -> Iterable[Tuple[str, Iterable[str]]]
         return ("LICENSE", sorted(self._licenses)),
 
 
@@ -181,24 +181,24 @@ class Dependency(Orderable):
         self.port = port
 
     @abstractmethod
-    def __unicode__(self):
-        # type: () -> unicode
+    def __str__(self):
+        # type: () -> str
         raise NotImplementedError()
 
     def key(self):
-        # type: () -> unicode
+        # type: () -> str
         return self.port.name
 
 
 class PortDependency(Dependency):
     def __init__(self, port, condition=">0"):
-        # type: (Port, unicode) -> None
+        # type: (Port, str) -> None
         super(PortDependency, self).__init__(port)
         self.port = port
         self.condition = condition
 
-    def __unicode__(self):
-        # type: () -> unicode
+    def __str__(self):
+        # type: () -> str
         return "%s%s:%s" % (self.port.pkgname, self.condition, self.port.origin)
 
 
@@ -213,25 +213,25 @@ class PortDepends(PortObject):
             self._depends.add(dependency)
 
         def generate(self):
-            # type: () -> Iterable[unicode]
-            return (unicode(d) for d in sorted(self._depends))
+            # type: () -> Iterable[str]
+            return (str(d) for d in sorted(self._depends))
 
     def __init__(self):
         # type: () -> None
         super(PortDepends, self).__init__()
-        self._depends = OrderedDict() # type: OrderedDict[unicode, Set[Dependency]]
+        self._depends = OrderedDict()  # type: Dict[str, Set[Dependency]]
         self.run = self._make_depends("RUN_DEPENDS")
         self.test = self._make_depends("TEST_DEPENDS")
 
     def _make_depends(self, name):
-        # type: (unicode) -> PortDepends.Depends
-        depends = set() # type: Set[Dependency]
+        # type: (str) -> PortDepends.Depends
+        depends = set()  # type: Set[Dependency]
         self._depends[name] = depends
         return PortDepends.Depends(depends)
 
     def generate(self):
-        # type: () -> Iterable[Tuple[unicode, Iterable[unicode]]]
-        return ((k, (unicode(d) + "\n" for d in sorted(v)))
+        # type: () -> Iterable[Tuple[str, Iterable[str]]]
+        return ((k, (str(d) + "\n" for d in sorted(v)))
                 for k, v in self._depends.items() if len(v))
 
 
@@ -272,7 +272,7 @@ class PortUses(PortObject):
     def __init__(self):
         # type: () -> None
         super(PortUses, self).__init__()
-        self._uses = {} # type: Dict[type, Uses]
+        self._uses = {}  # type: Dict[type, Uses]
 
     def __call__(self, uses):
         # type: (type) -> Uses
@@ -281,15 +281,15 @@ class PortUses(PortObject):
         return self._uses[uses]
 
     def get_variable(self, name, value):
-        # type: (unicode, unicode) -> unicode
+        # type: (str, str) -> str
         values = [v for v in (u.get_variable(name) for u in self._uses.values()) if v is not None]
         if len(values) > 1:
             raise PortException("PortUses: multiple uses define value for variable '%s'" % name)
         return values[0] if len(values) else value
 
     def generate(self):
-        # type: () -> Iterable[Tuple[unicode, Iterable[unicode]]]
-        return ("USES", (unicode(u) for u in sorted(self._uses.values()))),
+        # type: () -> Iterable[Tuple[str, Iterable[str]]]
+        return ("USES", (str(u) for u in sorted(self._uses.values()))),
 
 
 class PortException(Exception):
@@ -299,32 +299,32 @@ class PortException(Exception):
 class Port(object):
     portname = PortVar(1, 1, "PORTNAME")
     distversion = PortVar(1, 4, "DISTVERSION")
-    categories = PortVar(1, 8, "CATEGORIES") # type: List[unicode]
+    categories = PortVar(1, 8, "CATEGORIES")  # type: List[str]
     pkgnameprefix = PortVar(1, 12, "PKGNAMEPREFIX")
 
-    maintainer = PortVar(2, 1, "MAINTAINER") # type: unicode
+    maintainer = PortVar(2, 1, "MAINTAINER")  # type: str
     comment = PortVar(2, 2, "COMMENT")
 
-    license = PortObj(3, PortLicense) # type: PortLicense
+    license = PortObj(3, PortLicense)  # type: PortLicense
 
-    depends = PortObj(4, PortDepends) # type: PortDepends
+    depends = PortObj(4, PortDepends)  # type: PortDepends
 
-    uses = PortObj(5, PortUses) # type: PortUses
+    uses = PortObj(5, PortUses)  # type: PortUses
 
     def __init__(self, name):
-        # type: (unicode) -> None
-        self._values = {} # type: Dict[PortValue, Union[unicode, List[unicode], PortObject]]
+        # type: (str) -> None
+        self._values = {}  # type: Dict[PortValue, Union[str, List[str], PortObject]]
         self.maintainer = Platform.address
         self.name = name
 
     @property
     def origin(self):
-        # type: () -> unicode
+        # type: () -> str
         return "%s/%s" % (self.categories[0], self.pkgname)
 
     @property
     def pkgname(self):
-        # type: () -> unicode
+        # type: () -> str
         return "%s%s" % (self.pkgnameprefix, self.portname)
 
     @staticmethod
@@ -334,38 +334,38 @@ class Port(object):
     @staticmethod
     def _gen_header(makefile):
         makefile.writelines((
-            "# Created by: %s <%s>\n" % (Platform.fullname, Platform.address),
+            "# Created by: %s <%s>\n" % (Platform.full_name, Platform.address),
             "# $FreeBSD$\n",
         ))
 
     def _gen_sections(self, makefile):
         items = list(self._values.items())
         items.sort(key=lambda i: i[0])
-        for _, values in groupby(items, lambda i: i[0].section):
-            values = [j for i in values for j in i[0].generate(i[1])]
-            tabs = max(2, int(ceil(max(len(n[0]) for n in values) + 1.0) / Platform.tabwidth))
+        for _, values in groupby(items, lambda x: x[0].section):
+            values = [k for j in values for k in j[0].generate(j[1])]
+            tabs = max(2, int(ceil(max(len(n[0]) for n in values) + 1.0) / Platform.tab_width))
             makefile.write("\n")
             for name, value in values:
-                needed_tabs = tabs - int(floor((len(name) + 1.0) / Platform.tabwidth))
+                needed_tabs = tabs - int(floor((len(name) + 1.0) / Platform.tab_width))
                 makefile.write("%s=%s" % (name, "\t" * needed_tabs))
-                width = tabs * Platform.tabwidth
-                firstline = True
-                for i in value:
-                    nextline = i[-1] == "\n"
-                    i = i.rstrip("\n")
-                    if not firstline:
-                        if width == -1 or width + len(i) + 1 > Platform.pagewidth:
+                width = tabs * Platform.tab_width
+                first_line = True
+                for j in value:
+                    next_line = j[-1] == "\n"
+                    j = j.rstrip("\n")
+                    if not first_line:
+                        if width == -1 or width + len(j) + 1 > Platform.page_width:
                             makefile.write(" \\\n%s" % ("\t" * tabs))
-                            width = tabs * Platform.tabwidth
+                            width = tabs * Platform.tab_width
                         else:
                             makefile.write(" ")
                             width += 1
-                    firstline = False
-                    makefile.write(i)
-                    if nextline:
+                    first_line = False
+                    makefile.write(j)
+                    if next_line:
                         width = -1
                     else:
-                        width += len(i)
+                        width += len(j)
                 makefile.write("\n")
 
     def generate(self):
@@ -375,17 +375,17 @@ class Port(object):
         self._gen_footer(makefile)
         return makefile.getvalue()
 
-    def get_value(self, portvalue):
-        # type: (PortValue) -> Union[unicode, List[unicode], PortObject]
-        return self._values[portvalue]
+    def get_value(self, port_value):
+        # type: (PortValue) -> Union[str, List[str], PortObject]
+        return self._values[port_value]
 
-    def has_value(self, portvalue):
+    def has_value(self, port_value):
         # type: (PortValue) -> bool
-        return portvalue in self._values
+        return port_value in self._values
 
-    def set_value(self, portvalue, value):
-        # type: (PortValue, Union[unicode, List[unicode], PortObject]) -> None
-        self._values[portvalue] = value
+    def set_value(self, port_value, value):
+        # type: (PortValue, Union[str, List[str], PortObject]) -> None
+        self._values[port_value] = value
 
 
 class CranPort(Port):
@@ -454,18 +454,18 @@ def add_dependency(depends, value):
 
 
 def match_key(line):
-    # type: (unicode) -> bool
+    # type: (str) -> bool
     return bool(match("^[a-zA-Z/@]+:", line))
 
 
 def make_cran_port(name):
     port = CranPort(name)
     with open("test/car/DESCRIPTION", "rU") as package:
-        descr = Stream(i.rstrip('\n') for i in package.readlines())
-    while descr.has_current:
-        line = descr.current
+        desc = Stream(i.rstrip('\n') for i in package.readlines())
+    while desc.has_current:
+        line = desc.current
         key, value = line.split(":", 1)
-        value = value.strip() + "".join(" " + i.strip() for i in descr.take_until(match_key))
+        value = value.strip() + "".join(" " + i.strip() for i in desc.take_until(match_key))
         if key == "Package":
             if port.name != Cran.PKGNAMEPREFIX + value:
                 msg = "CRAN: package name (%s) does not match port name (%s)" % (value, port.name)
