@@ -13,10 +13,11 @@ try:
     from StringIO import StringIO
 except ImportError:
     from io import StringIO  # type: ignore
-from typing import Any, Callable, Dict, Iterable, List, Set, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, List, Set, Tuple, Union  # pylint: disable=unused-import
 
 
 class Orderable(object):
+    # pylint: disable=too-few-public-methods
     __metaclass__ = ABCMeta
 
     def __eq__(self, other):
@@ -35,10 +36,12 @@ class Orderable(object):
 
     @abstractmethod
     def key(self):
+        # type: () -> Any
         raise NotImplementedError()
 
 
 class Platform(object):
+    # pylint: disable=too-few-public-methods
     _passwd = getpwuid(getuid())
 
     address = "%s@%s" % (_passwd.pw_name, gethostname())
@@ -89,14 +92,13 @@ class PortValue(Orderable):
         self.section = section
 
     @abstractmethod
-    def __get__(self, obj, objtype):
+    def __get__(self, instance, owner):
         # type: (Port, type) -> Any
-        assert issubclass(objtype, Port)
         raise NotImplementedError()
 
     @abstractmethod
     def generate(self, value):
-        # type: (Any) -> Iterable[Tuple[str, Iterable[str]]]
+        # type: (Union[str, List[str], PortObject]) -> Iterable[Tuple[str, Iterable[str]]]
         raise NotImplementedError()
 
     def key(self):
@@ -110,23 +112,54 @@ class PortVar(PortValue):
         super(PortVar, self).__init__(section, order)
         self.name = name
 
-    def __get__(self, obj, objtype):
-        # type: (Port, type) -> Union[str, List[str]]
-        assert issubclass(objtype, Port)
-        value = obj.get_value(self) if obj.has_value(self) else None
+    def __get__(self, instance, owner):
+        # type: (Port, type) -> str
+        value = instance.get_value(self) if instance.has_value(self) else None
+        if isinstance(value, str):
+            value = instance.uses.get_variable(self.name, [value])
+        else:
+            assert value is None
+            value = instance.uses.get_variable(self.name, None)
+        if value is None:
+            raise PortException("Port: port variable not set: %s" % self.name)
+        return value[0]
+
+    def __set__(self, obj, value):
+        # type: (Port, str) -> None
+        obj.set_value(self, value)
+
+    def generate(self, value):
+        # type: (Union[str, List[str], PortObject]) -> Iterable[Tuple[str, Iterable[str]]]
         assert isinstance(value, str)
-        value = obj.uses.get_variable(self.name, value)
+        return (self.name, (value,)),
+
+
+class PortVarList(PortValue):
+    def __init__(self, section, order, name):
+        # type: (int, int, str) -> None
+        super(PortVarList, self).__init__(section, order)
+        self.name = name
+
+    def __get__(self, instance, owner):
+        # type: (Port, type) -> List[str]
+        value = instance.get_value(self) if instance.has_value(self) else None
+        if isinstance(value, list):
+            value = instance.uses.get_variable(self.name, value)
+        else:
+            assert value is None
+            value = instance.uses.get_variable(self.name, None)
         if value is None:
             raise PortException("Port: port variable not set: %s" % self.name)
         return value
 
     def __set__(self, obj, value):
-        # type: (Port, Union[str, List[str]]) -> None
+        # type: (Port, List[str]) -> None
         obj.set_value(self, value)
 
     def generate(self, value):
-        # type: (Union[str, List[str]]) -> Iterable[Tuple[str, Iterable[str]]]
-        return (self.name, (value,) if isinstance(value, str) else value),  # type: ignore
+        # type: (Union[str, List[str], PortObject]) -> Iterable[Tuple[str, Iterable[str]]]
+        assert isinstance(value, list)
+        return (self.name, value),
 
 
 class PortObj(PortValue):
@@ -135,17 +168,17 @@ class PortObj(PortValue):
         super(PortObj, self).__init__(section)
         self.factory = factory
 
-    def __get__(self, obj, objtype):
+    def __get__(self, instance, owner):
         # type: (Port, type) -> PortObject
-        assert issubclass(objtype, Port)
-        if not obj.has_value(self):
-            obj.set_value(self, self.factory())
-        value = obj.get_value(self)
+        if not instance.has_value(self):
+            instance.set_value(self, self.factory())
+        value = instance.get_value(self)
         assert isinstance(value, PortObject)
         return value
 
     def generate(self, value):
-        # type: (PortObject) -> Iterable[Tuple[str, Iterable[str]]]
+        # type: (Union[str, List[str], PortObject]) -> Iterable[Tuple[str, Iterable[str]]]
+        assert isinstance(value, PortObject)
         return value.generate()
 
 
@@ -203,7 +236,8 @@ class PortDependency(Dependency):
 
 
 class PortDepends(PortObject):
-    class Depends(object):
+    # pylint: disable=too-few-public-methods
+    class Collection(object):
         def __init__(self, depends):
             # type: (Set[Dependency]) -> None
             self._depends = depends
@@ -224,35 +258,39 @@ class PortDepends(PortObject):
         self.test = self._make_depends("TEST_DEPENDS")
 
     def _make_depends(self, name):
-        # type: (str) -> PortDepends.Depends
+        # type: (str) -> PortDepends.Collection
         depends = set()  # type: Set[Dependency]
         self._depends[name] = depends
-        return PortDepends.Depends(depends)
+        return PortDepends.Collection(depends)
 
     def generate(self):
         # type: () -> Iterable[Tuple[str, Iterable[str]]]
-        return ((k, (str(d) + "\n" for d in sorted(v)))
-                for k, v in self._depends.items() if len(v))
+        return ((k, (str(d) + "\n" for d in sorted(v))) for k, v in self._depends.items() if len(v))
 
 
 class Uses(Orderable):
     __metaclass__ = ABCMeta
 
     def __init__(self, name):
-        self._args = set()
+        # type: (str) -> None
+        self._args = set()  # type: Set[str]
         self.name = name
 
     def __str__(self):
+        # type: () -> str
         return self.name + (":" + ",".join(sorted(self._args)) if len(self._args) else "")
 
     def add(self, arg):
+        # type: (str) -> None
         self._args.add(arg)
 
     @abstractmethod
     def get_variable(self, name):
+        # type: (str) -> List[str]
         raise NotImplementedError()
 
     def key(self):
+        # type: () -> str
         return self.name
 
 
@@ -260,11 +298,13 @@ class Cran(Uses):
     PKGNAMEPREFIX = "R-cran-"
 
     def __init__(self):
+        # type: () -> None
         super(Cran, self).__init__("cran")
 
     def get_variable(self, name):
+        # type: (str) -> List[str]
         if name == "PKGNAMEPREFIX":
-            return Cran.PKGNAMEPREFIX
+            return [Cran.PKGNAMEPREFIX]
         return None
 
 
@@ -281,7 +321,7 @@ class PortUses(PortObject):
         return self._uses[uses]
 
     def get_variable(self, name, value):
-        # type: (str, str) -> str
+        # type: (str, List[str]) -> List[str]
         values = [v for v in (u.get_variable(name) for u in self._uses.values()) if v is not None]
         if len(values) > 1:
             raise PortException("PortUses: multiple uses define value for variable '%s'" % name)
@@ -297,13 +337,13 @@ class PortException(Exception):
 
 
 class Port(object):
-    portname = PortVar(1, 1, "PORTNAME")
-    distversion = PortVar(1, 4, "DISTVERSION")
-    categories = PortVar(1, 8, "CATEGORIES")  # type: List[str]
-    pkgnameprefix = PortVar(1, 12, "PKGNAMEPREFIX")
+    portname = PortVar(1, 1, "PORTNAME")  # type: str
+    distversion = PortVar(1, 4, "DISTVERSION")  # type: str
+    categories = PortVarList(1, 8, "CATEGORIES")  # type: List[str]
+    pkgnameprefix = PortVar(1, 12, "PKGNAMEPREFIX")  # type: str
 
     maintainer = PortVar(2, 1, "MAINTAINER")  # type: str
-    comment = PortVar(2, 2, "COMMENT")
+    comment = PortVar(2, 2, "COMMENT")  # type: str
 
     license = PortObj(3, PortLicense)  # type: PortLicense
 
@@ -329,20 +369,21 @@ class Port(object):
 
     @staticmethod
     def _gen_footer(makefile):
+        # type: (file) -> None
         makefile.write("\n.include <bsd.port.mk>\n")
 
     @staticmethod
     def _gen_header(makefile):
+        # type: (file) -> None
         makefile.writelines((
             "# Created by: %s <%s>\n" % (Platform.full_name, Platform.address),
             "# $FreeBSD$\n",
         ))
 
     def _gen_sections(self, makefile):
-        items = list(self._values.items())
-        items.sort(key=lambda i: i[0])
-        for _, values in groupby(items, lambda x: x[0].section):
-            values = [k for j in values for k in j[0].generate(j[1])]
+        # type: (file) -> None
+        for _, items in groupby(sorted(self._values.items(), key=lambda k: k[0]), lambda k: k[0].section):
+            values = [j for i in items for j in i[0].generate(i[1])]
             tabs = max(2, int(ceil(max(len(n[0]) for n in values) + 1.0) / Platform.tab_width))
             makefile.write("\n")
             for name, value in values:
@@ -350,25 +391,26 @@ class Port(object):
                 makefile.write("%s=%s" % (name, "\t" * needed_tabs))
                 width = tabs * Platform.tab_width
                 first_line = True
-                for j in value:
-                    next_line = j[-1] == "\n"
-                    j = j.rstrip("\n")
+                for i in value:
+                    next_line = i[-1] == "\n"
+                    i = i.rstrip("\n")
                     if not first_line:
-                        if width == -1 or width + len(j) + 1 > Platform.page_width:
+                        if width == -1 or width + len(i) + 1 > Platform.page_width:
                             makefile.write(" \\\n%s" % ("\t" * tabs))
                             width = tabs * Platform.tab_width
                         else:
                             makefile.write(" ")
                             width += 1
                     first_line = False
-                    makefile.write(j)
+                    makefile.write(i)
                     if next_line:
                         width = -1
                     else:
-                        width += len(j)
+                        width += len(i)
                 makefile.write("\n")
 
     def generate(self):
+        # type: () -> str
         makefile = StringIO()
         self._gen_header(makefile)
         self._gen_sections(makefile)
@@ -389,28 +431,110 @@ class Port(object):
 
 
 class CranPort(Port):
+    class Keywords(object):
+        IGNORED_KEYS = [
+            "Date",
+            "Authors@R",
+            "ByteCompile",
+            "LazyLoad",
+            "LazyData",
+            "Author",
+            "Maintainer",
+            "Repository",
+            "Repository/R-Forge/Project",
+            "Repository/R-Forge/Revision",
+            "Repository/R-Forge/DateTimeStamp",
+            "Date/Publication",
+            "Packaged",
+        ]
+
+        def __init__(self):
+            # type: () -> None
+            self._keywords = {}  # type: Dict[str, Callable[[CranPort, str], None]]
+
+        def __get__(self, instance, owner):
+            if instance is None:
+                return self
+            return lambda key, value, line: self.parse(instance, key, value, line)
+
+        def keyword(self, keyword):
+            # type: (str) -> Callable[[Callable[[CranPort, str], None]], CranPort.Keywords]
+            def assign(func):
+                # type: (Callable[[CranPort, str], None]) -> CranPort.Keywords
+                self._keywords[keyword] = func
+                return self
+            return assign
+
+        def parse(self, port, key, value, line):
+            # type: (CranPort, str, str, int) -> None
+            if key in self._keywords:
+                self._keywords[key](port, value)
+            elif key not in self.IGNORED_KEYS and False:
+                raise PortException("CRAN: package key %s unknown at line %s" % (key, line))
+
+    parse = Keywords()
+
     def __init__(self, name):
+        # type: (str) -> None
         super(CranPort, self).__init__(Cran.PKGNAMEPREFIX + name)
-        self.categories = ("math",)
+        self.categories = ["math"]
         self.portname = name
         self.uses(Cran).add("auto-plist")
 
+    @parse.keyword("Depends")  # type: ignore
+    def parse(self, value):  # pylint: disable=function-redefined
+        # type: (str) -> None
+        pass
 
-IGNORED_KEYS = [
-    "Date",
-    "Authors@R",
-    "ByteCompile",
-    "LazyLoad",
-    "LazyData",
-    "Author",
-    "Maintainer",
-    "Repository",
-    "Repository/R-Forge/Project",
-    "Repository/R-Forge/Revision",
-    "Repository/R-Forge/DateTimeStamp",
-    "Date/Publication",
-    "Packaged",
-]
+    @parse.keyword("Description")  # type: ignore
+    def parse(self, value):  # pylint: disable=function-redefined
+        # type: (str) -> None
+        pass
+
+    @parse.keyword("Imports")  # type: ignore
+    def parse(self, value):  # pylint: disable=function-redefined
+        # type: (str) -> None
+        add_dependency(self.depends.run, value)
+
+    @parse.keyword("License")  # type: ignore
+    def parse(self, value):  # pylint: disable=function-redefined
+        # type: (str) -> None
+        pass
+
+    @parse.keyword("NeedsCompilation")  # type: ignore
+    def parse(self, value):  # pylint: disable=function-redefined
+        # type: (str) -> None
+        if value == "yes":
+            self.uses(Cran).add("compiles")  # type: ignore
+        elif value != "no":
+            raise PortException("CRAN: unknown 'NeedsCompilation' value '%s', expected 'yes' or 'no'" % value)
+
+    @parse.keyword("Package")  # type: ignore
+    def parse(self, value):  # pylint: disable=function-redefined
+        # type: (str) -> None
+        if self.portname != value:
+            raise PortException("CRAN: package name (%s) does not match port name (%s)" % (value, self.name))
+
+    @parse.keyword("Suggests")  # type: ignore
+    def parse(self, value):  # pylint: disable=function-redefined
+        # type: (str) -> None
+        add_dependency(self.depends.test, value)
+
+    @parse.keyword("Title")  # type: ignore
+    def parse(self, value):  # pylint: disable=function-redefined
+        # type: (str) -> None
+        self.comment = value
+
+    @parse.keyword("URL")  # type: ignore
+    def parse(self, value):  # pylint: disable=function-redefined
+        # type: (str) -> None
+        pass
+
+    @parse.keyword("Version")  # type: ignore
+    def parse(self, value):  # pylint: disable=function-redefined
+        # type: (str) -> None
+        self.distversion = value
+
 
 INTERNAL_PACKAGES = [
     "KernSmooth",
@@ -445,11 +569,12 @@ INTERNAL_PACKAGES = [
 
 
 def add_dependency(depends, value):
+    # type: (PortDepends.Collection, str) -> None
     for cran in value.split(","):
-        cran = match(r"^\s*(\w+)(?:\s*\((.*)\))?\s*$", cran)
-        name = cran.group(1).strip()
+        depend = match(r"^\s*(\w+)(?:\s*\((.*)\))?\s*$", cran)
+        name = depend.group(1).strip()
         if name not in INTERNAL_PACKAGES:
-            condition = cran.group(2).replace("-", ".").replace(" ", "") if cran.group(2) else ">0"
+            condition = depend.group(2).replace("-", ".").replace(" ", "") if depend.group(2) else ">0"
             depends.add(PortDependency(CranPort(name), condition))
 
 
@@ -459,6 +584,7 @@ def match_key(line):
 
 
 def make_cran_port(name):
+    # type: (str) -> CranPort
     port = CranPort(name)
     with open("test/car/DESCRIPTION", "rU") as package:
         desc = Stream(i.rstrip('\n') for i in package.readlines())
@@ -466,30 +592,7 @@ def make_cran_port(name):
         line = desc.current
         key, value = line.split(":", 1)
         value = value.strip() + "".join(" " + i.strip() for i in desc.take_until(match_key))
-        if key == "Package":
-            if port.name != Cran.PKGNAMEPREFIX + value:
-                msg = "CRAN: package name (%s) does not match port name (%s)" % (value, port.name)
-                raise PortException(msg)
-        elif key == "Version":
-            port.distversion = value
-        elif key == "Title":
-            port.comment = value
-        elif key == "Depends":
-            pass
-        elif key == "Imports":
-            add_dependency(port.depends.run, value)
-        elif key == "Suggests":
-            add_dependency(port.depends.test, value)
-        elif key == "Description":
-            pass
-        elif key == "License":
-            pass
-        elif key == "URL":
-            pass
-        elif key == "NeedsCompilation":
-            port.uses(Cran).add("compiles")
-        elif key not in IGNORED_KEYS:
-            raise PortException("CRAN: package key %s unknown at line %s" % (key, line))
+        port.parse(key, value, desc.line)  # type: ignore
     return port
 
 

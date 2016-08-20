@@ -1,0 +1,5 @@
+[MASTER]
+rcfile=.pylintrc
+
+[FORMAT]
+max-line-length=120
