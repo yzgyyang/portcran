@@ -10,14 +10,17 @@ from os import getuid, environ
 from plumbum.cmd import make
 from plumbum.path import LocalPath
 from pwd import getpwuid
-from re import match
+from re import match, search
 from socket import gethostname
 try:
     from StringIO import StringIO
 except ImportError:
     from io import StringIO  # type: ignore
 from sys import argv
+from tarfile import open as taropen
 from typing import Any, Callable, Dict, Iterable, List, Set, Tuple, Union  # pylint: disable=unused-import
+from urllib import urlretrieve
+from urllib2 import urlopen
 
 
 class Orderable(object):
@@ -603,7 +606,7 @@ INTERNAL_PACKAGES = [
 def add_dependency(depends, value, optional=False):
     # type: (PortDepends.Collection, str) -> None
     for cran in (i.strip() for i in value.split(",")):
-        depend = match(r"^(\w+)(?:\s*\((.*)\))?$", cran)
+        depend = match(r"(\w+)(?:\s*\((.*)\))?", cran)
         name = depend.group(1).strip()
         if name not in INTERNAL_PACKAGES:
             condition = depend.group(2).replace("-", ".").replace(" ", "") if depend.group(2) else ">0"
@@ -622,9 +625,16 @@ def match_key(line):
 
 def make_cran_port(name):
     # type: (str) -> CranPort
+    print("Cheching for latest version...")
+    site_page = urlopen("http://cran.r-project.org/package=%s" % name).read()
+    version = search("<td>Version:</td>\s*<td>(.*?)</td>", site_page).group(1)
+    distfile = Ports.distdir / ("%s_%s.tar.gz" % (name, version))
+    if not distfile.exists():
+        print("Fetching package source...")
+        urlretrieve("https://cran.r-project.org/src/contrib/%s" % distfile.name, distfile)
     port = CranPort(name)
-    with open("test/car/DESCRIPTION", "rU") as package:
-        desc = Stream(i.rstrip('\n') for i in package.readlines())
+    with taropen(str(distfile), "r:gz") as distfile:
+        desc = Stream(i.rstrip('\n') for i in distfile.extractfile("%s/DESCRIPTION" % name).readlines())
     while desc.has_current:
         line = desc.current
         key, value = line.split(":", 1)
@@ -637,7 +647,8 @@ class Ports(object):
     # pylint: disable=too-few-public-methods
     dir = LocalPath(environ.get("PORTSDIR", "/usr/ports"))
 
-    categories = make["-C", dir, "-V", "SUBDIR"]().split()
+    categories = make["-C", dir, "-VSUBDIR"]().split()
+    distdir = LocalPath(make["-C", dir / "Mk", "-fbsd.port.mk", "-VDISTDIR"]().strip())
 
 
 def get_cran_port(name, cran_ports={}):
