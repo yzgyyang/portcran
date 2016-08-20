@@ -196,14 +196,18 @@ class PortLicense(PortObject):
         # type: () -> None
         super(PortLicense, self).__init__()
         self._licenses = set()  # type: Set[str]
+        self.combination = None  # type: str
 
     def add(self, license_type):
-        # type: (str) -> None
+        # type: (str) -> PortLicense
         self._licenses.add(license_type)
+        return self
 
     def generate(self):
         # type: () -> Iterable[Tuple[str, Iterable[str]]]
-        return ("LICENSE", sorted(self._licenses)),
+        yield ("LICENSE", sorted(self._licenses))
+        if self.combination is not None:
+            yield ("LICENSE_COMB", (self.combination,))
 
 
 class Dependency(Orderable):
@@ -341,6 +345,7 @@ class Port(object):
     distversion = PortVar(1, 4, "DISTVERSION")  # type: str
     categories = PortVarList(1, 8, "CATEGORIES")  # type: List[str]
     pkgnameprefix = PortVar(1, 12, "PKGNAMEPREFIX")  # type: str
+    distname = PortVar(1, 14, "DISTNAME")  # type: str
 
     maintainer = PortVar(2, 1, "MAINTAINER")  # type: str
     comment = PortVar(2, 2, "COMMENT")  # type: str
@@ -478,6 +483,7 @@ class CranPort(Port):
         # type: (str) -> None
         super(CranPort, self).__init__(Cran.PKGNAMEPREFIX + name)
         self.categories = ["math"]
+        self.distname = "${PORTNAME}_${DISTVERSION}"
         self.portname = name
         self.uses(Cran).add("auto-plist")
 
@@ -499,7 +505,10 @@ class CranPort(Port):
     @parse.keyword("License")  # type: ignore
     def parse(self, value):  # pylint: disable=function-redefined
         # type: (str) -> None
-        pass
+        if value == "GPL (>= 2)":
+            self.license.add("GPLv2").add("GPLv3").combination = "dual"
+        else:
+            raise PortException("CRAN: unknown 'License' value '%s'" % value)
 
     @parse.keyword("NeedsCompilation")  # type: ignore
     def parse(self, value):  # pylint: disable=function-redefined
