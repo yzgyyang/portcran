@@ -358,11 +358,12 @@ class Port(object):
 
     uses = PortObj(5, PortUses)  # type: PortUses
 
-    def __init__(self, name):
-        # type: (str) -> None
+    def __init__(self, name, portdir=None):
+        # type: (str, LocalPath) -> None
         self._values = {}  # type: Dict[PortValue, Union[str, List[str], PortObject]]
         self.maintainer = Platform.address
         self.name = name
+        self._portdir = portdir
 
     def __repr__(self):
         return "<Port: %s>" % self.origin
@@ -377,18 +378,32 @@ class Port(object):
         # type: () -> str
         return "%s%s" % (self.pkgnameprefix, self.portname)
 
+    @property
+    def portdir(self):
+        # type: () -> LocalPath
+        return Ports.dir / self.origin if self._portdir is None else self._portdir
+
+    @portdir.setter
+    def portdir(self, portdir):
+        # type: (LocalPath) -> None
+        self._portdir = portdir
+
     @staticmethod
     def _gen_footer(makefile):
         # type: (file) -> None
         makefile.write("\n.include <bsd.port.mk>\n")
 
-    @staticmethod
-    def _gen_header(makefile):
+    def _gen_header(self, makefile):
         # type: (file) -> None
-        makefile.writelines((
-            "# Created by: %s <%s>\n" % (Platform.full_name, Platform.address),
-            "# $FreeBSD$\n",
-        ))
+        port_makefile = self.portdir / "Makefile"
+        if port_makefile.exists():
+            with open(port_makefile, "rU") as port_makefile:
+                created_by = port_makefile.readline()
+                keyword = port_makefile.readline()
+        else:
+            created_by = "# Created by: %s <%s>\n" % (Platform.full_name, Platform.address)
+            keyword = "# $FreeBSD$\n"
+        makefile.writelines((created_by, keyword))
 
     def _gen_sections(self, makefile):
         # type: (file) -> None
@@ -484,9 +499,9 @@ class CranPort(Port):
 
     parse = Keywords()
 
-    def __init__(self, name):
-        # type: (str) -> None
-        super(CranPort, self).__init__(Cran.PKGNAMEPREFIX + name)
+    def __init__(self, name, portdir=None):
+        # type: (str, LocalPath) -> None
+        super(CranPort, self).__init__(Cran.PKGNAMEPREFIX + name, portdir)
         self.categories = ["math"]
         self.distname = "${PORTNAME}_${DISTVERSION}"
         self.portname = name
@@ -537,7 +552,7 @@ class CranPort(Port):
     @parse.keyword("Title")  # type: ignore
     def parse(self, value):  # pylint: disable=function-redefined
         # type: (str) -> None
-        self.comment = value
+        self.comment = value + " for R"
 
     @parse.keyword("URL")  # type: ignore
     def parse(self, value):  # pylint: disable=function-redefined
@@ -604,7 +619,7 @@ def match_key(line):
 
 def make_cran_port(name):
     # type: (str) -> CranPort
-    port = CranPort(name)
+    port = CranPort(name, LocalPath("/home/dbn/ports/R-cran-car"))
     with open("test/car/DESCRIPTION", "rU") as package:
         desc = Stream(i.rstrip('\n') for i in package.readlines())
     while desc.has_current:
@@ -629,7 +644,7 @@ def get_cran_port(name, cran_ports={}):
                 filter=lambda i: i.name.startswith(Cran.PKGNAMEPREFIX),
                 dir_filter=lambda i: str(i)[len(str(Ports.dir)) + 1:].find('/') == -1 and i.name in Ports.categories):
             name = portdir.name[len(Cran.PKGNAMEPREFIX):]
-            port = CranPort(name)
+            port = CranPort(name, portdir)
             port.categories = [portdir.split()[-2]]
             cran_ports[name] = port
     if name in cran_ports:
