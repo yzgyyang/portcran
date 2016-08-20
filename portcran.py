@@ -2,6 +2,7 @@
 from __future__ import absolute_import, division, print_function
 
 from abc import ABCMeta, abstractmethod
+from argparse import ArgumentParser
 from collections import OrderedDict
 from itertools import groupby
 from math import ceil, floor
@@ -15,6 +16,7 @@ try:
     from StringIO import StringIO
 except ImportError:
     from io import StringIO  # type: ignore
+from sys import argv
 from typing import Any, Callable, Dict, Iterable, List, Set, Tuple, Union  # pylint: disable=unused-import
 
 
@@ -435,12 +437,13 @@ class Port(object):
                 makefile.write("\n")
 
     def generate(self):
-        # type: () -> str
+        # type: () -> None
         makefile = StringIO()
         self._gen_header(makefile)
         self._gen_sections(makefile)
         self._gen_footer(makefile)
-        return makefile.getvalue()
+        with open(self.portdir / "Makefile", "w") as portmakefile:
+            portmakefile.write(makefile.getvalue())
 
     def get_value(self, port_value):
         # type: (PortValue) -> Union[str, List[str], PortObject]
@@ -542,7 +545,7 @@ class CranPort(Port):
     def parse(self, value):  # pylint: disable=function-redefined
         # type: (str) -> None
         if self.portname != value:
-            raise PortException("CRAN: package name (%s) does not match port name (%s)" % (value, self.name))
+            raise PortException("CRAN: package name (%s) does not match port name (%s)" % (value, self.portname))
 
     @parse.keyword("Suggests")  # type: ignore
     def parse(self, value):  # pylint: disable=function-redefined
@@ -599,8 +602,8 @@ INTERNAL_PACKAGES = [
 
 def add_dependency(depends, value, optional=False):
     # type: (PortDepends.Collection, str) -> None
-    for cran in value.split(","):
-        depend = match(r"^\s*(\w+)(?:\s*\((.*)\))?\s*$", cran)
+    for cran in (i.strip() for i in value.split(",")):
+        depend = match(r"^(\w+)(?:\s*\((.*)\))?$", cran)
         name = depend.group(1).strip()
         if name not in INTERNAL_PACKAGES:
             condition = depend.group(2).replace("-", ".").replace(" ", "") if depend.group(2) else ">0"
@@ -619,7 +622,7 @@ def match_key(line):
 
 def make_cran_port(name):
     # type: (str) -> CranPort
-    port = CranPort(name, LocalPath("/home/dbn/ports/R-cran-car"))
+    port = CranPort(name)
     with open("test/car/DESCRIPTION", "rU") as package:
         desc = Stream(i.rstrip('\n') for i in package.readlines())
     while desc.has_current:
@@ -643,13 +646,39 @@ def get_cran_port(name, cran_ports={}):
         for portdir in Ports.dir.walk(
                 filter=lambda i: i.name.startswith(Cran.PKGNAMEPREFIX),
                 dir_filter=lambda i: str(i)[len(str(Ports.dir)) + 1:].find('/') == -1 and i.name in Ports.categories):
-            name = portdir.name[len(Cran.PKGNAMEPREFIX):]
-            port = CranPort(name, portdir)
+            cran_name = portdir.name[len(Cran.PKGNAMEPREFIX):]
+            port = CranPort(cran_name, portdir)
             port.categories = [portdir.split()[-2]]
-            cran_ports[name] = port
+            cran_ports[cran_name] = port
     if name in cran_ports:
         return cran_ports[name]
 
 
-car = make_cran_port("car")
-print(car.generate())
+def update():
+    parser = ArgumentParser()
+    parser.add_argument("name", help="Name of the CRAN package")
+    parser.add_argument("-o", "--output", help="Output directory")
+
+    parser.add_argument("-a", "--address", help="Creator/maintainer's e-mail address")
+
+    args = parser.parse_args()
+
+    if args.address is not None:
+        Platform.address = args.address
+
+    cran = make_cran_port(args.name)
+    if args.output is not None:
+        cran.portdir = LocalPath(args.output)
+    cran.generate()
+
+
+def main():
+    if len(argv) == 1:
+        print("usage: portcran update [-o OUTPUT] name")
+        exit(2)
+    action = argv.pop(1)
+    if action == "update":
+        update()
+
+if __name__ == "__main__":
+    main()
