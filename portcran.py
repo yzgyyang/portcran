@@ -7,8 +7,6 @@ from collections import OrderedDict
 from itertools import groupby
 from math import ceil, floor
 from os import getuid, environ
-from plumbum.cmd import make
-from plumbum.path import LocalPath
 from pwd import getpwuid
 from re import match, search
 from socket import gethostname
@@ -18,9 +16,11 @@ except ImportError:
     from io import StringIO  # type: ignore
 from sys import argv
 from tarfile import open as taropen
-from typing import Any, Callable, Dict, Iterable, List, Set, Tuple, Union  # pylint: disable=unused-import
 from urllib import urlretrieve
 from urllib2 import urlopen
+from plumbum.cmd import make
+from plumbum.path import LocalPath
+from typing import Any, Callable, Dict, Iterable, List, Set, Tuple, Union  # pylint: disable=unused-import
 
 
 class Orderable(object):
@@ -127,8 +127,6 @@ class PortVar(PortValue):
         else:
             assert value is None
             value = instance.uses.get_variable(self.name, None)
-        if value is None:
-            raise PortException("Port: port variable not set: %s" % self.name)
         return value[0]
 
     def __set__(self, obj, value):
@@ -155,8 +153,6 @@ class PortVarList(PortValue):
         else:
             assert value is None
             value = instance.uses.get_variable(self.name, None)
-        if value is None:
-            raise PortException("Port: port variable not set: %s" % self.name)
         return value
 
     def __set__(self, obj, value):
@@ -363,12 +359,14 @@ class Port(object):
 
     uses = PortObj(5, PortUses)  # type: PortUses
 
-    def __init__(self, name, portdir=None):
-        # type: (str, LocalPath) -> None
+    def __init__(self, category, name, portdir=None):
+        # type: (str, str, LocalPath) -> None
         self._values = {}  # type: Dict[PortValue, Union[str, List[str], PortObject]]
+        self._portdir = portdir
+        self.categories = [category]
         self.maintainer = Platform.address
         self.name = name
-        self._portdir = portdir
+        self.portname = name
 
     def __repr__(self):
         return "<Port: %s>" % self.origin
@@ -379,11 +377,6 @@ class Port(object):
         return "%s/%s" % (self.categories[0], self.pkgname)
 
     @property
-    def pkgname(self):
-        # type: () -> str
-        return "%s%s" % (self.pkgnameprefix, self.portname)
-
-    @property
     def portdir(self):
         # type: () -> LocalPath
         return Ports.dir / self.origin if self._portdir is None else self._portdir
@@ -392,6 +385,11 @@ class Port(object):
     def portdir(self, portdir):
         # type: (LocalPath) -> None
         self._portdir = portdir
+
+    @property
+    def pkgname(self):
+        # type: () -> str
+        return "%s%s" % (self.pkgnameprefix, self.portname)
 
     @staticmethod
     def _gen_footer(makefile):
@@ -505,10 +503,9 @@ class CranPort(Port):
 
     parse = Keywords()
 
-    def __init__(self, name, portdir=None):
-        # type: (str, LocalPath) -> None
-        super(CranPort, self).__init__(Cran.PKGNAMEPREFIX + name, portdir)
-        self.categories = ["math"]
+    def __init__(self, category, name, portdir=None):
+        # type: (str, str, LocalPath) -> None
+        super(CranPort, self).__init__(category, Cran.PKGNAMEPREFIX + name, portdir)
         self.distname = "${PORTNAME}_${DISTVERSION}"
         self.portname = name
         self.uses(Cran).add("auto-plist")
@@ -575,6 +572,7 @@ INTERNAL_PACKAGES = [
     "KernSmooth",
     "MASS",
     "Matrix",
+    "R",
     "boot",
     "class",
     "cluster",
@@ -604,7 +602,7 @@ INTERNAL_PACKAGES = [
 
 
 def add_dependency(depends, value, optional=False):
-    # type: (PortDepends.Collection, str) -> None
+    # type: (PortDepends.Collection, str, bool) -> None
     for cran in (i.strip() for i in value.split(",")):
         depend = match(r"(\w+)(?:\s*\((.*)\))?", cran)
         name = depend.group(1).strip()
@@ -623,24 +621,30 @@ def match_key(line):
     return bool(match("^[a-zA-Z/@]+:", line))
 
 
-def make_cran_port(name):
-    # type: (str) -> CranPort
+def make_cran_port(name, portdir=None):
+    # type: (str, LocalPath) -> CranPort
     print("Cheching for latest version...")
     site_page = urlopen("http://cran.r-project.org/package=%s" % name).read()
-    version = search("<td>Version:</td>\s*<td>(.*?)</td>", site_page).group(1)
+    version = search(r"<td>Version:</td>\s*<td>(.*?)</td>", site_page).group(1)
     distfile = Ports.distdir / ("%s_%s.tar.gz" % (name, version))
-    if not distfile.exists():
+    if not distfile.exists():  # pylint: disable=no-member
         print("Fetching package source...")
-        urlretrieve("https://cran.r-project.org/src/contrib/%s" % distfile.name, distfile)
-    port = CranPort(name)
+        urlretrieve("https://cran.r-project.org/src/contrib/%s" % distfile.name, distfile)  # pylint: disable=no-member
+    if portdir.exists():
+        categories = make["-C", portdir, "-VCATEGORIES"]().split()
+    else:
+        categories = ["math"]
+    cran = CranPort(categories[0], name, portdir)
+    if len(categories) > 1:
+        cran.categories = categories
     with taropen(str(distfile), "r:gz") as distfile:
         desc = Stream(i.rstrip('\n') for i in distfile.extractfile("%s/DESCRIPTION" % name).readlines())
     while desc.has_current:
         line = desc.current
         key, value = line.split(":", 1)
         value = value.strip() + "".join(" " + i.strip() for i in desc.take_until(match_key))
-        port.parse(key, value, desc.line)  # type: ignore
-    return port
+        cran.parse(key, value, desc.line)  # type: ignore
+    return cran
 
 
 class Ports(object):
@@ -651,18 +655,20 @@ class Ports(object):
     distdir = LocalPath(make["-C", dir / "Mk", "-fbsd.port.mk", "-VDISTDIR"]().strip())
 
 
-def get_cran_port(name, cran_ports={}):
+CRAN_PORTS = {}  # type: Dict[str, CranPort]
+
+
+def get_cran_port(name):
     # type (str) -> CranPort
-    if not len(cran_ports):
+    if not len(CRAN_PORTS):
         for portdir in Ports.dir.walk(
                 filter=lambda i: i.name.startswith(Cran.PKGNAMEPREFIX),
                 dir_filter=lambda i: str(i)[len(str(Ports.dir)) + 1:].find('/') == -1 and i.name in Ports.categories):
             cran_name = portdir.name[len(Cran.PKGNAMEPREFIX):]
-            port = CranPort(cran_name, portdir)
-            port.categories = [portdir.split()[-2]]
-            cran_ports[cran_name] = port
-    if name in cran_ports:
-        return cran_ports[name]
+            port = CranPort([portdir.split()[-2]], cran_name, portdir)
+            CRAN_PORTS[cran_name] = port
+    if name in CRAN_PORTS:
+        return CRAN_PORTS[name]
 
 
 def update():
@@ -677,9 +683,8 @@ def update():
     if args.address is not None:
         Platform.address = args.address
 
-    cran = make_cran_port(args.name)
-    if args.output is not None:
-        cran.portdir = LocalPath(args.output)
+    portdir = None if args.output is None else LocalPath(args.output)
+    cran = make_cran_port(args.name, portdir)
     cran.generate()
 
 
