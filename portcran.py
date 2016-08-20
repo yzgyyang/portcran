@@ -5,7 +5,9 @@ from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from itertools import groupby
 from math import ceil, floor
-from os import getuid
+from os import getuid, environ
+from plumbum.cmd import make
+from plumbum.path import LocalPath
 from pwd import getpwuid
 from re import match
 from socket import gethostname
@@ -362,6 +364,9 @@ class Port(object):
         self.maintainer = Platform.address
         self.name = name
 
+    def __repr__(self):
+        return "<Port: %s>" % self.origin
+
     @property
     def origin(self):
         # type: () -> str
@@ -527,7 +532,7 @@ class CranPort(Port):
     @parse.keyword("Suggests")  # type: ignore
     def parse(self, value):  # pylint: disable=function-redefined
         # type: (str) -> None
-        add_dependency(self.depends.test, value)
+        add_dependency(self.depends.test, value, optional=True)
 
     @parse.keyword("Title")  # type: ignore
     def parse(self, value):  # pylint: disable=function-redefined
@@ -577,14 +582,19 @@ INTERNAL_PACKAGES = [
 ]
 
 
-def add_dependency(depends, value):
+def add_dependency(depends, value, optional=False):
     # type: (PortDepends.Collection, str) -> None
     for cran in value.split(","):
         depend = match(r"^\s*(\w+)(?:\s*\((.*)\))?\s*$", cran)
         name = depend.group(1).strip()
         if name not in INTERNAL_PACKAGES:
             condition = depend.group(2).replace("-", ".").replace(" ", "") if depend.group(2) else ">0"
-            depends.add(PortDependency(CranPort(name), condition))
+            port = get_cran_port(name)
+            if port is None:
+                if not optional:
+                    raise PortException("CRAN: package '%s' not in Ports" % name)
+            else:
+                depends.add(PortDependency(port, condition))
 
 
 def match_key(line):
@@ -603,6 +613,27 @@ def make_cran_port(name):
         value = value.strip() + "".join(" " + i.strip() for i in desc.take_until(match_key))
         port.parse(key, value, desc.line)  # type: ignore
     return port
+
+
+class Ports(object):
+    # pylint: disable=too-few-public-methods
+    dir = LocalPath(environ.get("PORTSDIR", "/usr/ports"))
+
+    categories = make["-C", dir, "-V", "SUBDIR"]().split()
+
+
+def get_cran_port(name, cran_ports={}):
+    # type (str) -> CranPort
+    if not len(cran_ports):
+        for portdir in Ports.dir.walk(
+                filter=lambda i: i.name.startswith(Cran.PKGNAMEPREFIX),
+                dir_filter=lambda i: str(i)[len(str(Ports.dir)) + 1:].find('/') == -1 and i.name in Ports.categories):
+            name = portdir.name[len(Cran.PKGNAMEPREFIX):]
+            port = CranPort(name)
+            port.categories = [portdir.split()[-2]]
+            cran_ports[name] = port
+    if name in cran_ports:
+        return cran_ports[name]
 
 
 car = make_cran_port("car")
