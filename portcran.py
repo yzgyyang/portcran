@@ -513,7 +513,7 @@ class CranPort(Port):
     @parse.keyword("Depends")  # type: ignore
     def parse(self, value):  # pylint: disable=function-redefined
         # type: (str) -> None
-        pass
+        add_dependency(self.depends.run, value)
 
     @parse.keyword("Description")  # type: ignore
     def parse(self, value):  # pylint: disable=function-redefined
@@ -555,7 +555,7 @@ class CranPort(Port):
     @parse.keyword("Title")  # type: ignore
     def parse(self, value):  # pylint: disable=function-redefined
         # type: (str) -> None
-        self.comment = value + " for R"
+        self.comment = value
 
     @parse.keyword("URL")  # type: ignore
     def parse(self, value):  # pylint: disable=function-redefined
@@ -665,7 +665,7 @@ def get_cran_port(name):
                 filter=lambda i: i.name.startswith(Cran.PKGNAMEPREFIX),
                 dir_filter=lambda i: str(i)[len(str(Ports.dir)) + 1:].find('/') == -1 and i.name in Ports.categories):
             cran_name = portdir.name[len(Cran.PKGNAMEPREFIX):]
-            port = CranPort([portdir.split()[-2]], cran_name, portdir)
+            port = CranPort(portdir.split()[-2], cran_name, portdir)
             CRAN_PORTS[cran_name] = port
     if name in CRAN_PORTS:
         return CRAN_PORTS[name]
