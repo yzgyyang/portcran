@@ -511,6 +511,12 @@ class CranPort(Port):
         self.portname = name
         self.uses(Cran).add("auto-plist")
 
+    def generate(self):
+        super(CranPort, self).generate()
+        pkg_plist = self.portdir / "pkg-plist"
+        if pkg_plist.exists():
+            pkg_plist.delete()
+
     @parse.keyword("Depends")  # type: ignore
     def parse(self, value):  # pylint: disable=function-redefined
         # type: (str) -> None
