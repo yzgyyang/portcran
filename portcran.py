@@ -126,7 +126,7 @@ class PortVar(PortValue):
             value = instance.uses.get_variable(self.name, [value])
         else:
             assert value is None
-            value = instance.uses.get_variable(self.name, None)
+            value = instance.uses.get_variable(self.name)
         return value[0]
 
     def __set__(self, obj, value):
@@ -152,7 +152,7 @@ class PortVarList(PortValue):
             value = instance.uses.get_variable(self.name, value)
         else:
             assert value is None
-            value = instance.uses.get_variable(self.name, None)
+            value = instance.uses.get_variable(self.name)
         return value
 
     def __set__(self, obj, value):
@@ -327,7 +327,7 @@ class PortUses(PortObject):
             self._uses[uses] = uses()
         return self._uses[uses]
 
-    def get_variable(self, name, value):
+    def get_variable(self, name, value=None):
         # type: (str, List[str]) -> List[str]
         values = [v for v in (u.get_variable(name) for u in self._uses.values()) if v is not None]
         if len(values) > 1:
@@ -445,6 +445,7 @@ class Port(object):
         self._gen_footer(makefile)
         with open(self.portdir / "Makefile", "w") as portmakefile:
             portmakefile.write(makefile.getvalue())
+        make["-C", self.portdir, "makesum"]()
 
     def get_value(self, port_value):
         # type: (PortValue) -> Union[str, List[str], PortObject]
