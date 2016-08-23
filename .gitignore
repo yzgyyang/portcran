@@ -1,0 +1,5 @@
+.eric6project
+.idea
+*.e4p
+**/*.py[co]
+
