@@ -222,7 +222,9 @@ class PortStub(object):
 
 class Port(PortStub):
     portname = PortVar(1, 1, "PORTNAME")  # type: str
+    portversion = PortVar(1, 2, "PORTVERSION")  # type: str
     distversion = PortVar(1, 4, "DISTVERSION")  # type: str
+    portrevision = PortVar(1, 6, "PORTREVISION")  # type: str
     categories = PortVarList(1, 8, "CATEGORIES")  # type: List[str]
     pkgnameprefix = PortVar(1, 12, "PKGNAMEPREFIX")  # type: str
     distname = PortVar(1, 14, "DISTNAME")  # type: str
@@ -316,3 +318,22 @@ class Port(PortStub):
     def set_value(self, port_value, value):
         # type: (PortValue, Union[str, List[str], PortObject]) -> None
         self._values[port_value] = value
+
+    def set_variables(self, variables):
+        # type: (Dict[str, List[str]]) -> Dict[str, List[str]]
+        variables = OrderedDict(variables)
+        bases = [type(self)]
+        i = 0
+        while i < len(bases):
+            bases.extend(i for i in bases[i].__bases__ if i not in bases)
+            for var in vars(bases[i]).values():
+                if isinstance(var, (PortVar, PortVarList)) and var.name in variables:
+                    value = variables.pop(var.name)
+                    if not len(value):
+                        del self._values[var]
+                    elif isinstance(var, PortVar):
+                        self._values[var] = " ".join(value)
+                    else:
+                        self._values[var] = value
+            i += 1
+        return variables

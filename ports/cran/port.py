@@ -2,9 +2,10 @@ from __future__ import absolute_import, division, print_function
 
 from re import match
 from plumbum.path import LocalPath  # pylint: disable=unused-import
-from ports import Port, PortError, PortStub, Ports  # pylint: disable=unused-import
+from ports import Dependency, Port, PortError, PortStub, Ports  # pylint: disable=unused-import
 from ports.cran.uses import Cran
 from ports.dependency import PortDependency
+from ports.core.internal import make_vars
 from ports.core.port import PortDepends  # pylint: disable=unused-import
 from typing import Callable, Dict, Union  # pylint: disable=unused-import
 
@@ -63,7 +64,43 @@ INTERNAL_PACKAGES = [
 def get_cran_port(port):
     # type: (PortStub) -> CranPort
     if port.name.startswith(Cran.PKGNAMEPREFIX):
-        return CranPort(port.category, port.name, port.portdir)
+        portname = port.name[len(Cran.PKGNAMEPREFIX):]
+        port = CranPort(port.category, portname, port.portdir)
+        variables = make_vars(port.portdir)
+
+        variables = port.set_variables(variables)
+
+        if "LICENSE" in variables:
+            for license_type in variables.pop("LICENSE"):
+                port.license.add(license_type[0])
+            if "LICENSE_COMB" in variables:
+                license_comb = variables.pop("LICENSE_COMB")
+                assert len(license_comb) == 1
+                port.license.combination = license_comb[0]
+
+        if "RUN_DEPENDS" in variables:
+            for depends in variables.pop("RUN_DEPENDS"):
+                port.depends.run.add(Dependency.create(depends))
+        if "TEST_DEPENDS" in variables:
+            for depends in variables.pop("TEST_DEPENDS"):
+                port.depends.test.add(Dependency.create(depends))
+
+        assert len(variables["USES"])
+        for use in variables.pop("USES"):
+            uses = use.split(":")
+            assert 1 <= len(uses) <= 2
+            name = uses[0]
+            args = uses[1].split(",") if len(uses) == 2 else []
+            if name == "cran":
+                for arg in args:
+                    port.uses(Cran).add(arg)
+            else:
+                raise PortError("CRAN: unknown uses: %s" % name)
+
+        assert port.portname == portname
+        assert port.distname in ("${PORTNAME}_${DISTVERSION}", "${PORTNAME}_${PORTVERSION}")
+        assert not(len(variables))
+        return port
 
 
 class CranPort(Port):
@@ -114,6 +151,7 @@ class CranPort(Port):
                 except PortError:
                     if not optional:
                         raise
+                    print("Suggested package does not exist: %s" % name)
                 else:
                     condition = depend.group(2).replace("-", ".").replace(" ", "") if depend.group(2) else ">0"
                     depends.add(PortDependency(port, condition))

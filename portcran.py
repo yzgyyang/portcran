@@ -13,37 +13,7 @@ except ImportError:
 from plumbum.path import LocalPath
 from ports import Platform, PortError, Ports
 from ports.cran import Cran, CranPort
-from typing import Callable, Iterable  # pylint: disable=unused-import
-
-
-class Stream(object):
-    def __init__(self, objects):
-        # type: (Iterable[str]) -> None
-        self._objects = list(objects)
-        self.line = 1
-
-    @property
-    def current(self):
-        # type: () -> str
-        return self._objects[self.line - 1]
-
-    @property
-    def has_current(self):
-        # type: () -> bool
-        return self.line != -1
-
-    def next(self):
-        # type: () -> bool
-        if 0 <= self.line < len(self._objects):
-            self.line += 1
-            return True
-        self.line = -1
-        return False
-
-    def take_until(self, condition):
-        # type: (Callable[[str], bool]) -> Iterable[str]
-        while self.next() and not condition(self.current):
-            yield self.current
+from ports.core.internal import Stream
 
 
 def match_key(line):
