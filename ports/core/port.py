@@ -17,7 +17,7 @@ from ports.core.ports import Ports
 from ports.core.uses import Uses  # pylint: disable=unused-import
 from typing import Any, Callable, Dict, Iterable, List, Set, Tuple, Union  # pylint: disable=unused-import
 
-__all__ = ["Port", "PortException"]
+__all__ = ["Port", "PortException", "PortStub"]
 
 
 class PortValue(Orderable):
@@ -204,7 +204,24 @@ class PortException(Exception):
     pass
 
 
-class Port(object):
+class PortStub(object):
+    def __init__(self, category, name, portdir):
+        # type: (str, str, LocalPath) -> None
+        self._portdir = portdir  # type: LocalPath
+        self.category = category  # type: str
+        self.name = name  # type: str
+
+    def __repr__(self):
+        # type: () -> str
+        return "<Port: %s>" % self.origin
+
+    @property
+    def origin(self):
+        # type: () -> str
+        return "%s/%s" % (self.category, self.name)
+
+
+class Port(PortStub):
     portname = PortVar(1, 1, "PORTNAME")  # type: str
     distversion = PortVar(1, 4, "DISTVERSION")  # type: str
     categories = PortVarList(1, 8, "CATEGORIES")  # type: List[str]
@@ -220,23 +237,13 @@ class Port(object):
 
     uses = PortObj(5, PortUses)  # type: PortUses
 
-    def __init__(self, category, name, portdir=None):
+    def __init__(self, category, name, portdir):
         # type: (str, str, LocalPath) -> None
+        super(Port, self).__init__(category, name, portdir)
         self._values = {}  # type: Dict[PortValue, Union[str, List[str], PortObject]]
-        self._portdir = portdir
         self.categories = [category]
         self.maintainer = Platform.address
-        self.name = name
         self.portname = name
-
-    def __repr__(self):
-        # type: () -> str
-        return "<Port: %s>" % self.origin
-
-    @property
-    def origin(self):
-        # type: () -> str
-        return "%s/%s" % (self.categories[0], self.pkgname)
 
     @property
     def portdir(self):

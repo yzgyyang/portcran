@@ -58,22 +58,6 @@ INTERNAL_PACKAGES = [
     "utils",
 ]
 
-CRAN_PORTS = {}  # type: Dict[str, CranPort]
-
-
-# HACK: make generic and move into Ports
-def get_cran_port(name):
-    # type: (str) -> CranPort
-    if not len(CRAN_PORTS):
-        for portdir in Ports.dir.walk(
-                filter=lambda i: i.name.startswith(Cran.PKGNAMEPREFIX),
-                dir_filter=lambda i: str(i)[len(str(Ports.dir)) + 1:].find('/') == -1 and i.name in Ports.categories):
-            cran_name = portdir.name[len(Cran.PKGNAMEPREFIX):]
-            port = CranPort(portdir.split()[-2], cran_name, portdir)
-            CRAN_PORTS[cran_name] = port
-    if name in CRAN_PORTS:
-        return CRAN_PORTS[name]
-
 
 class CranPort(Port):
     class Keywords(object):
@@ -119,8 +103,9 @@ class CranPort(Port):
             name = depend.group(1).strip()
             if name not in INTERNAL_PACKAGES:
                 condition = depend.group(2).replace("-", ".").replace(" ", "") if depend.group(2) else ">0"
-                port = get_cran_port(name)
-                if port is None:
+                try:
+                    port = Ports.get_port_by_name(Cran.PKGNAMEPREFIX + name)
+                except PortException:
                     if not optional:
                         raise PortException("CRAN: package '%s' not in Ports" % name)
                 else:
