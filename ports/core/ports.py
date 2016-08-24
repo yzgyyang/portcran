@@ -1,8 +1,8 @@
 from __future__ import absolute_import, division, print_function
 
 from os import environ
-from plumbum.cmd import make
 from plumbum.path import LocalPath
+from ports.core.internal import make_var
 from ports.core.port import Port, PortError, PortStub  # pylint: disable=unused-import
 from typing import Callable  # pylint: disable=unused-import
 
@@ -14,14 +14,14 @@ class Ports(object):
     _ports = []  # type: List[PortStub]
     dir = LocalPath(environ.get("PORTSDIR", "/usr/ports"))
 
-    categories = [str(i) for i in make["-C", dir, "-VSUBDIR"]().split()]  # NOTE: remove in Python 3
-    distdir = LocalPath(make["-C", dir / "Mk", "-fbsd.port.mk", "-VDISTDIR"]().strip())
+    categories = make_var(dir, "SUBDIR")
+    distdir = LocalPath(make_var(dir, "DISTDIR")[0])
 
     @staticmethod
     def _load_ports():
         # type: () -> None
         for category in Ports.categories:
-            for name in make["-C", Ports.dir / category, "-VSUBDIR"]().split():
+            for name in make_var(Ports.dir / category, "SUBDIR"):
                 name = str(name)  # NOTE: remove in Python 3
                 Ports._ports.append(PortStub(category, name, Ports.dir / category / name))
 

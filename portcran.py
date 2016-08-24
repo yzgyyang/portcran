@@ -10,10 +10,9 @@ try:
     from urllib2 import urlopen
 except ImportError:
     from urllib import urlopen  # type: ignore  # pylint: disable=ungrouped-imports
-from plumbum.cmd import make
 from plumbum.path import LocalPath
-from ports import Platform, Ports
-from ports.cran import CranPort
+from ports import Platform, PortError, Ports
+from ports.cran import Cran, CranPort
 from typing import Callable, Iterable  # pylint: disable=unused-import
 
 
@@ -61,10 +60,10 @@ def make_cran_port(name, portdir=None):
     if not distfile.exists():  # pylint: disable=no-member
         print("Fetching package source...")
         urlretrieve("https://cran.r-project.org/src/contrib/%s" % distfile.name, distfile)  # pylint: disable=no-member
-    if portdir.exists():
-        categories = make["-C", portdir, "-VCATEGORIES"]().split()
-    else:
-        categories = ["math"]
+    try:
+        categories = Ports.get_port_by_name(Cran.PKGNAMEPREFIX + name).categories
+    except PortError:
+        categories = ["make"]
     cran = CranPort(categories[0], name, portdir)
     if len(categories) > 1:
         cran.categories = categories
