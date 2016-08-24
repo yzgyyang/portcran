@@ -99,7 +99,7 @@ def get_cran_port(port):
 
         assert port.portname == portname
         assert port.distname in ("${PORTNAME}_${DISTVERSION}", "${PORTNAME}_${PORTVERSION}")
-        assert not(len(variables))
+        assert not len(variables)
         return port
 
 

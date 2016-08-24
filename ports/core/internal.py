@@ -2,17 +2,13 @@ from __future__ import absolute_import, division, print_function
 
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
-try:
-    from functools import reduce  # pylint: disable=redefined-builtin
-except ImportError:
-    pass
-from re import compile
+from re import compile as re_compile
 from plumbum.path import LocalPath  # pylint: disable=unused-import
 from typing import Any, Callable, Dict, Iterable, List  # pylint: disable=unused-import
 
 __all__ = ["make_var", "make_vars", "Orderable", "Stream"]
 
-VARIABLE_ASSIGNMENT = compile(r"^\s*(\w+)\s*([+?:]?)=(.*)$")
+VARIABLE_ASSIGNMENT = re_compile(r"^\s*(\w+)\s*([+?:]?)=(.*)$")
 
 
 def make_var(portdir, var):
@@ -100,7 +96,7 @@ class Stream(object):
                 break
 
     def take_until(self, condition):
-        # type: (Callable[[str], bool], bool) -> Iterable[str]
+        # type: (Callable[[str], bool]) -> Iterable[str]
         while self.next():
             value = self.current
             if not condition(value):

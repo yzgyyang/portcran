@@ -72,6 +72,7 @@ class PortVarList(PortValue):
     def __init__(self, section, order, name):
         # type: (int, int, str) -> None
         super(PortVarList, self).__init__(section, order)
+        self._setter = lambda x, y: y
         self.name = name
 
     def __get__(self, instance, owner):
@@ -86,12 +87,17 @@ class PortVarList(PortValue):
 
     def __set__(self, obj, value):
         # type: (Port, List[str]) -> None
-        obj.set_value(self, value)
+        obj.set_value(self, self._setter(obj, value))
 
     def generate(self, value):
         # type: (Union[str, List[str], PortObject]) -> Iterable[Tuple[str, Iterable[str]]]
         assert isinstance(value, list)
         return (self.name, value),
+
+    def setter(self, setter):
+        # type: (Callable[[Port, List[str]], List[str]]) -> PortVarList
+        self._setter = setter
+        return self
 
 
 class PortObj(PortValue):
@@ -297,6 +303,13 @@ class Port(PortStub):
                         width += len(i)
                 makefile.write("\n")
 
+    @categories.setter  # type: ignore
+    def categories(self, categories):
+        # type: (List[str]) -> List[str]
+        if not len(categories) or categories[0] != self.category:
+            raise PortError("Port: invalid categories, must start with: %s" % self.category)
+        return categories
+
     def generate(self):
         # type: () -> None
         makefile = StringIO()
@@ -322,10 +335,10 @@ class Port(PortStub):
     def set_variables(self, variables):
         # type: (Dict[str, List[str]]) -> Dict[str, List[str]]
         variables = OrderedDict(variables)
-        bases = [type(self)]
+        bases = [type(self)]  # type: List[type]
         i = 0
         while i < len(bases):
-            bases.extend(i for i in bases[i].__bases__ if i not in bases)
+            bases.extend(j for j in bases[i].__bases__ if j not in bases)
             for var in vars(bases[i]).values():
                 if isinstance(var, (PortVar, PortVarList)) and var.name in variables:
                     value = variables.pop(var.name)
