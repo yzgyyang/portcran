@@ -16,7 +16,7 @@ from ports.core.platform import Platform
 from ports.core.uses import Uses  # pylint: disable=unused-import
 from typing import Any, Callable, Dict, Iterable, List, Set, Tuple, Union  # pylint: disable=unused-import
 
-__all__ = ["Port", "PortException", "PortStub"]
+__all__ = ["Port", "PortError", "PortStub"]
 
 
 class PortValue(Orderable):
@@ -191,7 +191,7 @@ class PortUses(PortObject):
         # type: (str, List[str]) -> List[str]
         values = [v for v in (u.get_variable(name) for u in self._uses.values()) if v is not None]
         if len(values) > 1:
-            raise PortException("PortUses: multiple uses define value for variable '%s'" % name)
+            raise PortError("PortUses: multiple uses define value for variable '%s'" % name)
         return values[0] if len(values) else value
 
     def generate(self):
@@ -199,7 +199,7 @@ class PortUses(PortObject):
         return ("USES", (str(u) for u in sorted(self._uses.values()))),
 
 
-class PortException(Exception):
+class PortError(Exception):
     pass
 
 

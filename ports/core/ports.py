@@ -3,7 +3,7 @@ from __future__ import absolute_import, division, print_function
 from os import environ
 from plumbum.cmd import make
 from plumbum.path import LocalPath
-from ports.core.port import Port, PortException, PortStub  # pylint: disable=unused-import
+from ports.core.port import Port, PortError, PortStub  # pylint: disable=unused-import
 from typing import Callable  # pylint: disable=unused-import
 
 __all__ = ["Ports"]
@@ -32,14 +32,14 @@ class Ports(object):
             Ports._load_ports()
         ports = [i for i in Ports._ports if i.name == name]
         if not len(ports):
-            raise PortException("Ports: no port with name '%s' in collection" % name)
+            raise PortError("Ports: no port with name '%s' in collection" % name)
         if len(ports) > 1:
-            raise PortException("Ports: multiple ports with name '%s' in collection" % name)
+            raise PortError("Ports: multiple ports with name '%s' in collection" % name)
         for factory in reversed(Ports._factories):
             port = factory(ports[0])
             if port is not None:
                 return port
-        raise PortException("Ports: unable to create port from origin '%s'" % ports[0].origin)
+        raise PortError("Ports: unable to create port from origin '%s'" % ports[0].origin)
 
     @staticmethod
     def factory(factory):

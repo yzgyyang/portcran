@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 from re import match
 from plumbum.path import LocalPath  # pylint: disable=unused-import
-from ports import Port, PortException, PortStub, Ports  # pylint: disable=unused-import
+from ports import Port, PortError, PortStub, Ports  # pylint: disable=unused-import
 from ports.cran.uses import Cran
 from ports.dependency import PortDependency
 from ports.core.port import PortDepends  # pylint: disable=unused-import
@@ -91,7 +91,7 @@ class CranPort(Port):
             if key in self._keywords:
                 self._keywords[key](port, value)
             elif key not in IGNORED_KEYS and False:
-                raise PortException("CRAN: package key %s unknown at line %s" % (key, line))
+                raise PortError("CRAN: package key %s unknown at line %s" % (key, line))
 
     parse = Keywords()
 
@@ -111,7 +111,7 @@ class CranPort(Port):
             if name not in INTERNAL_PACKAGES:
                 try:
                     port = Ports.get_port_by_name(Cran.PKGNAMEPREFIX + name)
-                except PortException:
+                except PortError:
                     if not optional:
                         raise
                 else:
@@ -146,7 +146,7 @@ class CranPort(Port):
         if value == "GPL (>= 2)":
             self.license.add("GPLv2").add("GPLv3").combination = "dual"
         else:
-            raise PortException("CRAN: unknown 'License' value '%s'" % value)
+            raise PortError("CRAN: unknown 'License' value '%s'" % value)
 
     @parse.keyword("NeedsCompilation")  # type: ignore
     def parse(self, value):
@@ -154,13 +154,13 @@ class CranPort(Port):
         if value == "yes":
             self.uses(Cran).add("compiles")  # type: ignore
         elif value != "no":
-            raise PortException("CRAN: unknown 'NeedsCompilation' value '%s', expected 'yes' or 'no'" % value)
+            raise PortError("CRAN: unknown 'NeedsCompilation' value '%s', expected 'yes' or 'no'" % value)
 
     @parse.keyword("Package")  # type: ignore
     def parse(self, value):
         # type: (str) -> None # pylint: disable=function-redefined
         if self.portname != value:
-            raise PortException("CRAN: package name (%s) does not match port name (%s)" % (value, self.portname))
+            raise PortError("CRAN: package name (%s) does not match port name (%s)" % (value, self.portname))
 
     @parse.keyword("Suggests")  # type: ignore
     def parse(self, value):
