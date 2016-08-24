@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 from re import match
 from plumbum.path import LocalPath  # pylint: disable=unused-import
-from ports import Port, PortException, Ports
+from ports import Port, PortException, PortStub, Ports  # pylint: disable=unused-import
 from ports.cran.uses import Cran
 from ports.dependency import PortDependency
 from ports.core.port import PortDepends  # pylint: disable=unused-import
@@ -59,6 +59,13 @@ INTERNAL_PACKAGES = [
 ]
 
 
+@Ports.factory
+def get_cran_port(port):
+    # type: (PortStub) -> CranPort
+    if port.name.startswith(Cran.PKGNAMEPREFIX):
+        return CranPort(port.category, port.name, port.portdir)
+
+
 class CranPort(Port):
     class Keywords(object):
         def __init__(self):
@@ -102,13 +109,13 @@ class CranPort(Port):
             depend = match(r"(\w+)(?:\s*\((.*)\))?", cran)
             name = depend.group(1).strip()
             if name not in INTERNAL_PACKAGES:
-                condition = depend.group(2).replace("-", ".").replace(" ", "") if depend.group(2) else ">0"
                 try:
                     port = Ports.get_port_by_name(Cran.PKGNAMEPREFIX + name)
                 except PortException:
                     if not optional:
-                        raise PortException("CRAN: package '%s' not in Ports" % name)
+                        raise
                 else:
+                    condition = depend.group(2).replace("-", ".").replace(" ", "") if depend.group(2) else ">0"
                     depends.add(PortDependency(port, condition))
 
     def generate(self):

@@ -13,7 +13,6 @@ from plumbum.path import LocalPath  # pylint: disable=unused-import
 from ports.core.dependency import Dependency  # pylint: disable=unused-import
 from ports.core.internal import Orderable
 from ports.core.platform import Platform
-from ports.core.ports import Ports
 from ports.core.uses import Uses  # pylint: disable=unused-import
 from typing import Any, Callable, Dict, Iterable, List, Set, Tuple, Union  # pylint: disable=unused-import
 
@@ -207,9 +206,9 @@ class PortException(Exception):
 class PortStub(object):
     def __init__(self, category, name, portdir):
         # type: (str, str, LocalPath) -> None
-        self._portdir = portdir  # type: LocalPath
         self.category = category  # type: str
         self.name = name  # type: str
+        self.portdir = portdir  # type: LocalPath
 
     def __repr__(self):
         # type: () -> str
@@ -244,16 +243,6 @@ class Port(PortStub):
         self.categories = [category]
         self.maintainer = Platform.address
         self.portname = name
-
-    @property
-    def portdir(self):
-        # type: () -> LocalPath
-        return Ports.dir / self.origin if self._portdir is None else self._portdir
-
-    @portdir.setter
-    def portdir(self, portdir):
-        # type: (LocalPath) -> None
-        self._portdir = portdir
 
     @property
     def pkgname(self):
