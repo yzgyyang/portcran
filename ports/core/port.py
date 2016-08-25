@@ -136,6 +136,10 @@ class PortLicense(PortObject):
         self._licenses = set()  # type: Set[str]
         self.combination = None  # type: str
 
+    def __iter__(self):
+        # type: () -> Iterable[str]
+        return iter(self._licenses)
+
     def add(self, license_type):
         # type: (str) -> PortLicense
         self._licenses.add(license_type)
@@ -154,6 +158,10 @@ class PortDepends(PortObject):
         def __init__(self, depends):
             # type: (Set[Dependency]) -> None
             self._depends = depends
+
+        def __iter__(self):
+            # type: () -> Iterable[Dependency]
+            return iter(self._depends)
 
         def add(self, dependency):
             # type: (Dependency) -> None
@@ -210,11 +218,12 @@ class PortError(Exception):
 
 
 class PortStub(object):
-    def __init__(self, category, name, portdir):
+    def __init__(self, category, name, portdir=None):
         # type: (str, str, LocalPath) -> None
+        from ports.core.ports import Ports
         self.category = category  # type: str
         self.name = name  # type: str
-        self.portdir = portdir  # type: LocalPath
+        self.portdir = Ports.dir / self.origin if portdir is None else portdir  # type: LocalPath
 
     def __repr__(self):
         # type: () -> str

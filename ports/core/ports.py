@@ -44,9 +44,9 @@ class Ports(object):
     @staticmethod
     def _load_ports():
         # type: () -> None
-        print("Loading ports...")
+        print("Loading ports collection:")
         for category in Ports.categories:
-            print("Loading category: %s" % category)
+            print("\tLoading category: %s" % category)
             for name in make_var(Ports.dir / category, "SUBDIR"):
                 name = str(name)  # NOTE: remove in Python 3
                 Ports._ports.append(PortStub(category, name, Ports.dir / category / name))

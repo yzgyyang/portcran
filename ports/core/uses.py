@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 from abc import ABCMeta, abstractmethod
 from ports.core.internal import Orderable
-from typing import List, Set  # pylint: disable=unused-import
+from typing import Iterable, List, Set  # pylint: disable=unused-import
 
 __all__ = ["Uses"]
 
@@ -14,6 +14,10 @@ class Uses(Orderable):
         # type: (str) -> None
         self._args = set()  # type: Set[str]
         self.name = name
+
+    def __iter__(self):
+        # type: () -> Iterable[str]
+        return iter(self._args)
 
     def __str__(self):
         # type: () -> str
