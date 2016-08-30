@@ -56,6 +56,9 @@ class PortVar(PortValue):
         else:
             assert value is None
             value = instance.uses.get_variable(self.name)
+            if value is None:
+                value = [None]
+        assert len(value) == 1
         return value[0]
 
     def __set__(self, obj, value):
