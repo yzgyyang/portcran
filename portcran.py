@@ -20,7 +20,7 @@ from ports.core.port import PortLicense
 __author__ = "Davd Naylor <dbn@FreeBSD.org>"
 __license__ = "BSD (FreeBSD)"
 __summary__ = "Generates FreeBSD Ports from CRAN packages"
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 
 def match_key(line):
