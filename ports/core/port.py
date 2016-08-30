@@ -287,6 +287,8 @@ class Port(PortStub):
         # type: (file) -> None
         for _, items in groupby(sorted(self._values.items(), key=lambda k: k[0]), lambda k: k[0].section):
             values = [j for i in items for j in i[0].generate(i[1])]
+            if not len(values):
+                continue
             tabs = max(2, int(ceil(max(len(n[0]) for n in values) + 1.0) / Platform.tab_width))
             makefile.write("\n")
             for name, value in values:
