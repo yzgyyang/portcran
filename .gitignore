@@ -1,5 +1,8 @@
 .eric6project
 .idea
 *.e4p
+MANIFEST
+build/
+dist/
 **/*.py[co]
 

@@ -1,0 +1,6 @@
+0.1.1 (30-Aug-16):
+ - fix: Makefile generation with empty section (i.e. dependencies).
+ - fix: return unset port variable as None.
+
+0.1.0 (25-Aug-16):
+ - Initial release.
