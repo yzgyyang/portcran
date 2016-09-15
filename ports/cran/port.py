@@ -78,12 +78,10 @@ def get_cran_port(port):
                 assert len(license_comb) == 1
                 port.license.combination = license_comb[0]
 
-        if "RUN_DEPENDS" in variables:
-            for depends in variables.pop("RUN_DEPENDS"):
-                port.depends.run.add(Dependency.create(depends))
-        if "TEST_DEPENDS" in variables:
-            for depends in variables.pop("TEST_DEPENDS"):
-                port.depends.test.add(Dependency.create(depends))
+        for varname, depends in port.depends:
+            if varname in variables:
+                for depend in variables.pop(varname):
+                    depends.add(Dependency.create(depend))
 
         assert len(variables["USES"])
         for use in variables.pop("USES"):
@@ -99,7 +97,7 @@ def get_cran_port(port):
 
         assert port.portname == portname
         assert port.distname in ("${PORTNAME}_${DISTVERSION}", "${PORTNAME}_${PORTVERSION}")
-        assert not len(variables)
+        #assert not len(variables)
         return port
 
 
