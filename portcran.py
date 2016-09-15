@@ -14,7 +14,8 @@ from plumbum.path import LocalPath
 from ports import Platform, PortError, Ports
 from ports.cran import Cran, CranPort
 from ports.core.internal import Stream
-from ports.core.port import PortLicense
+from ports.core.port import PortLicense  # pylint: disable=unused-import
+from typing import Iterable, Tuple  # pylint: disable=unused-import
 
 
 __author__ = "Davd Naylor <dbn@FreeBSD.org>"
@@ -56,7 +57,7 @@ def make_cran_port(name, portdir=None):
 
 
 def diff(left, right):
-    # type: (Iterable[str], Iterable[str]) -> (List[str], bool, List[str])
+    # type: (Iterable[str], Iterable[str]) -> Tuple[List[str], bool, List[str]]
     left = list(left)
     right = list(right)
     old = [i for i in left if i not in right]
@@ -66,9 +67,9 @@ def diff(left, right):
     return old, left == right, new
 
 
-def log_depends(log, depend, diff):
-    # type: (file, str, (List[str], bool, List[str])) -> None
-    old, common, new = diff
+def log_depends(log, depend, difference):
+    # type: (BinaryIO, str, Tuple[List[str], bool, List[str]]) -> None
+    old, common, new = difference
     if not common:
         log.write(" - order %s dependencies lexicographically on origin\n" % depend)
     if len(old):
@@ -81,9 +82,9 @@ def log_depends(log, depend, diff):
             log.write("   - %s\n" % i)
 
 
-def log_uses(log, diff):
-    # type: (file, (List[str], bool, List[new])) -> None
-    old, common, new = diff
+def log_uses(log, difference):
+    # type: (BinaryIO, Tuple[List[str], bool, List[str]]) -> None
+    old, common, new = difference
     if not common:
         log.write(" - sort cran uses arguments lexicographically\n")
     for arg in old:
@@ -103,7 +104,7 @@ def log_uses(log, diff):
 
 
 def log_license(log, old, new):
-    # type: (file, PortLicense, PortLicense) -> None
+    # type: (BinaryIO, PortLicense, PortLicense) -> None
     if list(old) != list(sorted(new)):
         log.write(" - update license to: %s\n" % " ".join(sorted(new)))
     elif old.combination != new.combination:
