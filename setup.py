@@ -4,7 +4,7 @@ from distutils.core import setup
 
 setup(
     name="portcran",
-    version="0.1.1",
+    version="0.1.2",
     author="David Naylor",
     author_email="dbn@FreeBSD.org",
     packages=["ports.core", "ports", "ports.cran"],
