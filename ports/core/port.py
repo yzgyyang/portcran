@@ -14,7 +14,7 @@ from ports.core.dependency import Dependency  # pylint: disable=unused-import
 from ports.core.internal import Orderable
 from ports.core.platform import Platform
 from ports.core.uses import Uses  # pylint: disable=unused-import
-from typing import Any, Callable, Dict, Iterable, List, Set, Tuple, Union  # pylint: disable=unused-import
+from typing import Any, Callable, Dict, Iterable, Iterator, List, Set, Tuple, Union  # pylint: disable=unused-import
 
 __all__ = ["Port", "PortError", "PortStub"]
 
@@ -140,7 +140,7 @@ class PortLicense(PortObject):
         self.combination = None  # type: str
 
     def __iter__(self):
-        # type: () -> Iterable[str]
+        # type: () -> Iterator[str]
         return iter(self._licenses)
 
     def add(self, license_type):
@@ -178,8 +178,13 @@ class PortDepends(PortObject):
         # type: () -> None
         super(PortDepends, self).__init__()
         self._depends = OrderedDict()  # type: Dict[str, Set[Dependency]]
+        self.lib = self._make_depends("LIB_DEPENDS")
         self.run = self._make_depends("RUN_DEPENDS")
         self.test = self._make_depends("TEST_DEPENDS")
+
+    def __iter__(self):
+        # type: () -> Iterator[Tuple[str, Set[Dependency]]]
+        return iter(self._depends.items())
 
     def _make_depends(self, name):
         # type: (str) -> PortDepends.Collection
