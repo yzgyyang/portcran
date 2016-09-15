@@ -3,7 +3,26 @@ from __future__ import absolute_import, division, print_function
 from re import match
 from ports import Dependency, Port, Ports  # pylint: disable=unused-import
 
-__all__ = ["PortDependency"]
+__all__ = ["LibDependency", "PortDependency"]
+
+
+class LibDependency(Dependency):
+    def __init__(self, libname, origin):
+        # type: (str, str) -> None
+        super(LibDependency, self).__init__(origin)
+        self.libname = libname
+
+    def __str__(self):
+        # type: () -> str
+        return "lib%s.so:%s" % (self.libname, self.origin)
+
+    @staticmethod
+    @Dependency.factory
+    def _create(target, origin):
+        # type: (str, str) -> LibDependency
+        condition = match("lib(.*).so", target)
+        if condition:
+            return LibDependency(condition.group(1), origin)
 
 
 class PortDependency(Dependency):
