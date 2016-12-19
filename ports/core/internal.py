@@ -4,7 +4,7 @@ from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from re import compile as re_compile
 from plumbum.path import LocalPath  # pylint: disable=unused-import
-from typing import Any, Callable, Dict, Iterable, List  # pylint: disable=unused-import
+from typing import Callable, Iterable, List, Set  # pylint: disable=unused-import
 
 __all__ = ["make_var", "make_vars", "Orderable", "Stream"]
 
@@ -17,8 +17,8 @@ def make_var(portdir, var):
 
 
 def make_vars(portdir):
-    # type: (LocalPath) -> Dict[str, List[str]]
-    variables = OrderedDict()  # type: Dict[str, List[str]]
+    # type: (LocalPath) -> MakeDict
+    variables = MakeDict()
     with open(portdir / "Makefile", "r") as makefile:
         data = Stream(makefile.readlines(), lambda x: x.split("#", 2)[0].rstrip())
         while data.has_current:
@@ -28,11 +28,77 @@ def make_vars(portdir):
                 name = var.group(1)
                 modifier = var.group(2)
                 values = var.group(3).split()
-                if modifier == "+" and name in variables:
-                    variables[name].extend(values)
-                elif modifier != "?":
-                    variables[name] = values
+                if modifier == "+":
+                    variables.extend(name, values)
+                elif modifier == "?":
+                    variables.add(name, values)
+                else:
+                    assert not len(modifier)
+                    variables.set(name, values)
+
     return variables
+
+
+class MakeDict(object):
+    def __init__(self):
+        # type: () -> None
+        self._variables = OrderedDict()  # type: OrderedDict[str, List[str]]
+        self._internal = set()  # type: Set[str]
+
+    def __contains__(self, item):
+        # type: (str) -> bool
+        return item in self._variables
+
+    def __getitem__(self, item):
+        # type: (str) -> List[str]
+        values = self._variables[item]
+        subbed_values = []  # type: List[str]
+        for v in values:
+            if v.startswith("${") and v.endswith("}"):
+                variable = v[2:-1]
+                if variable in self._variables:
+                    subbed_values.extend(self[variable])
+                    self._internal.add(variable)
+                else:
+                    subbed_values.append(v)
+            else:
+                subbed_values.append(v)
+        return subbed_values
+
+    def __str__(self):
+        # type: () -> str
+        unpopped = []
+        for key, value in self._variables.items():
+            if key not in self._internal:
+                unpopped.append("%s=%s" % (key, value))
+        return ", ".join(unpopped)
+
+    def add(self, name, values):
+        # type: (str, List[str]) -> None
+        if name not in self._variables:
+            self.set(name, values)
+
+    @property
+    def all_popped(self):
+        # type: () -> bool
+        return len(self._internal) == len(self._variables)
+
+    def extend(self, name, values):
+        # type: (str, List[str]) -> None
+        if name in self._variables:
+            self._variables[name].extend(values)
+        else:
+            self.set(name, values)
+
+    def pop(self, name):
+        # type: (str) -> List[str]
+        values = self[name]
+        del self._variables[name]
+        return values
+
+    def set(self, name, values):
+        # type: (str, List[str]) -> None
+        self._variables[name] = values
 
 
 class Orderable(object):

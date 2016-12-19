@@ -11,10 +11,10 @@ except ImportError:
 from plumbum.cmd import make
 from plumbum.path import LocalPath  # pylint: disable=unused-import
 from ports.core.dependency import Dependency  # pylint: disable=unused-import
-from ports.core.internal import Orderable
+from ports.core.internal import MakeDict, Orderable  # pylint: disable=unused-import
 from ports.core.platform import Platform
 from ports.core.uses import Uses  # pylint: disable=unused-import
-from typing import Any, Callable, Dict, Iterable, Iterator, List, Set, Tuple, Union  # pylint: disable=unused-import
+from typing import Callable, Dict, Iterable, Iterator, List, Set, Tuple, Union  # pylint: disable=unused-import
 
 __all__ = ["Port", "PortError", "PortStub"]
 
@@ -359,8 +359,7 @@ class Port(PortStub):
         self._values[port_value] = value
 
     def set_variables(self, variables):
-        # type: (Dict[str, List[str]]) -> Dict[str, List[str]]
-        variables = OrderedDict(variables)
+        # type: (MakeDict) -> None
         bases = [type(self)]  # type: List[type]
         i = 0
         while i < len(bases):
@@ -375,4 +374,3 @@ class Port(PortStub):
                     else:
                         self._values[var] = value
             i += 1
-        return variables

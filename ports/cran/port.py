@@ -68,7 +68,7 @@ def get_cran_port(port):
             portname = port.name[len(Cran.PKGNAMEPREFIX):]
             port = CranPort(port.category, portname, port.portdir)
             variables = make_vars(port.portdir)
-            variables = port.set_variables(variables)
+            port.set_variables(variables)
 
             if "LICENSE" in variables:
                 for license_type in variables.pop("LICENSE"):
@@ -95,11 +95,12 @@ def get_cran_port(port):
 
             assert port.portname == portname
             assert port.distname in ("${PORTNAME}_${DISTVERSION}", "${PORTNAME}_${PORTVERSION}")
-            assert not len(variables)
+            assert variables.all_popped
             return port
         except:
             # XXX
             print("Failed to load CranPort: %s" % port.origin)
+            print("\tunloaded variables: %s" % variables)
             return Port(port.category, port.name, port.portdir)
 
 
