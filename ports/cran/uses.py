@@ -6,6 +6,7 @@ from typing import List  # pylint: disable=unused-import
 __all__ = ["Cran"]
 
 
+@Uses.register("cran")
 class Cran(Uses):
     PKGNAMEPREFIX = "R-cran-"
 
@@ -17,4 +18,3 @@ class Cran(Uses):
         # type: (str) -> List[str]
         if name == "PKGNAMEPREFIX":
             return [Cran.PKGNAMEPREFIX]
-        return None
