@@ -204,7 +204,9 @@ class PortUses(PortObject):
         self._uses = {}  # type: Dict[type, Uses]
 
     def __call__(self, uses):
-        # type: (type) -> Uses
+        # type: (Union[type, str]) -> Uses
+        if isinstance(uses, str):
+            uses = Uses.get(uses)
         if uses not in self._uses:
             self._uses[uses] = uses()
         return self._uses[uses]
@@ -272,7 +274,7 @@ class Port(PortStub):
     @property
     def pkgname(self):
         # type: () -> str
-        return "%s%s" % (self.pkgnameprefix, self.portname)
+        return "%s%s" % (self.pkgnameprefix or "", self.portname)
 
     @staticmethod
     def _gen_footer(makefile):
@@ -322,6 +324,10 @@ class Port(PortStub):
                         width += len(i)
                 makefile.write("\n")
 
+    def _gen_plist(self):
+        # type: () -> None
+        raise NotImplementedError("Generic Port does not know how to create pkg-plist")
+
     @categories.setter  # type: ignore
     def categories(self, categories):
         # type: (List[str]) -> List[str]
@@ -338,6 +344,7 @@ class Port(PortStub):
         with open(self.portdir / "Makefile", "w") as portmakefile:
             portmakefile.write(makefile.getvalue())
         make["-C", self.portdir, "makesum"]()
+        self._gen_plist()
 
     def get_value(self, port_value):
         # type: (PortValue) -> Union[str, List[str], PortObject]
