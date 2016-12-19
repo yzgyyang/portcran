@@ -72,11 +72,15 @@ def get_cran_port(port):
 
             if "LICENSE" in variables:
                 for license_type in variables.pop("LICENSE"):
-                    port.license.add(license_type[0])
+                    port.license.add(license_type)
                 if "LICENSE_COMB" in variables:
                     license_comb = variables.pop("LICENSE_COMB")
                     assert len(license_comb) == 1
                     port.license.combination = license_comb[0]
+                if "LICENSE_FILE" in variables:
+                    license_file = variables.pop("LICENSE_FILE")
+                    assert len(license_file) == 1
+                    port.license.file = license_file[0]
 
             for varname, depends in port.depends:
                 if varname in variables:

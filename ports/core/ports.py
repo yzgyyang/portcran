@@ -49,7 +49,7 @@ class Ports(object):
             print("\tLoading category: %s" % category)
             for name in make_var(Ports.dir / category, "SUBDIR"):
                 name = str(name)  # NOTE: remove in Python 3
-                Ports._ports.append(PortStub(category, name, Ports.dir / category / name))
+                Ports._ports.append(PortStub(category, name))
 
     @staticmethod
     def get_port_by_name(name):

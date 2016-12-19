@@ -138,6 +138,7 @@ class PortLicense(PortObject):
         super(PortLicense, self).__init__()
         self._licenses = set()  # type: Set[str]
         self.combination = None  # type: str
+        self.file = None  # type: str
 
     def __iter__(self):
         # type: () -> Iterator[str]
@@ -153,6 +154,8 @@ class PortLicense(PortObject):
         yield ("LICENSE", sorted(self._licenses))
         if self.combination is not None:
             yield ("LICENSE_COMB", (self.combination,))
+        if self.file is not None:
+            yield ("LICENSE_FILE", (self.file,))
 
 
 class PortDepends(PortObject):
