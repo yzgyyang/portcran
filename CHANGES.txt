@@ -1,3 +1,13 @@
+0.x.y (dd-MMM-yy):
+ - feature: allow Uses to be created via string.
+ - feature: add placeholders for 'shebangfix' and 'pkgconfig' Uses.
+ - fix: fall back to normal Port if CranPort cannot be loaded.
+ - fix: handle None pkgnameprefix.
+ - fix: remove pkg-plist if present.
+
+0.1.2 (15-Sep-16):
+ - fix: loading LIB_DEPENDS.
+
 0.1.1 (30-Aug-16):
  - fix: Makefile generation with empty section (i.e. dependencies).
  - fix: return unset port variable as None.
