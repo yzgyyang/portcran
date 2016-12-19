@@ -10,6 +10,8 @@ __all__ = ["Uses"]
 class Uses(Orderable):
     __metaclass__ = ABCMeta
 
+    _uses = {}  # type: Dict[str, type]
+
     def __init__(self, name):
         # type: (str) -> None
         self._args = set()  # type: Set[str]
@@ -23,14 +25,28 @@ class Uses(Orderable):
         # type: () -> str
         return self.name + (":" + ",".join(sorted(self._args)) if len(self._args) else "")
 
+    @staticmethod
+    def get(name):
+        # type: (str) -> type
+        return Uses._uses[name]
+
+    @staticmethod
+    def register(name):
+        # type: (str) -> Callable[[type], type]
+        def doregister(klass):
+            # type: (type) -> type
+            assert issubclass(klass, Uses)
+            Uses._uses[name] = klass
+            return klass
+        return doregister
+
     def add(self, arg):
         # type: (str) -> None
         self._args.add(arg)
 
-    @abstractmethod
     def get_variable(self, name):
         # type: (str) -> List[str]
-        raise NotImplementedError()
+        return None
 
     def key(self):
         # type: () -> str
