@@ -178,6 +178,7 @@ class PortDepends(PortObject):
         # type: () -> None
         super(PortDepends, self).__init__()
         self._depends = OrderedDict()  # type: Dict[str, Set[Dependency]]
+        self.build = self._make_depends("BUILD_DEPENDS")
         self.lib = self._make_depends("LIB_DEPENDS")
         self.run = self._make_depends("RUN_DEPENDS")
         self.test = self._make_depends("TEST_DEPENDS")
