@@ -6,6 +6,7 @@ __all__ = ["PkgConfig", "ShebangFix"]
 
 
 def create_uses(name):
+    # type: (str) -> type
     @Uses.register(name)
     class UsesClass(Uses):
         def __init__(self):

@@ -13,7 +13,7 @@ __all__ = ["Ports"]
 class Ports(object):
     _factories = []  # type: List[Callable[[PortStub], Port]]
     _ports = []  # type: List[PortStub]
-    dir = LocalPath(environ.get("PORTSDIR", "/usr/ports"))
+    dir = LocalPath(environ.get("PORTSDIR", "/usr/ports"))  # type: LocalPath
 
     categories = make_var(dir, "SUBDIR")
     distdir = LocalPath(make["-C", dir / "Mk", "-VDISTDIR", "-fbsd.port.mk"]().strip())

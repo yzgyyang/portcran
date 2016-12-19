@@ -85,10 +85,10 @@ def get_cran_port(port):
 
             assert len(variables["USES"])
             for use in variables.pop("USES"):
-                uses = use.split(":")
-                assert 1 <= len(uses) <= 2
-                name = uses[0]
-                args = uses[1].split(",") if len(uses) == 2 else []
+                uses_var = use.split(":")
+                assert 1 <= len(uses_var) <= 2
+                name = uses_var[0]
+                args = uses_var[1].split(",") if len(uses_var) == 2 else []
                 uses = port.uses(name)
                 for arg in args:
                     uses.add(arg)

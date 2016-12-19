@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 from abc import ABCMeta, abstractmethod
 from ports.core.internal import Orderable
-from typing import Iterable, List, Set  # pylint: disable=unused-import
+from typing import Callable, Dict, Iterable, List, Set  # pylint: disable=unused-import
 
 __all__ = ["Uses"]
 

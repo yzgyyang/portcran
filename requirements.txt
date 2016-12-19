@@ -1,0 +1,2 @@
+plumbum >= 1.6.2
+typing >= 3.5.2

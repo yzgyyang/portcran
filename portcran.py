@@ -15,7 +15,7 @@ from ports import Platform, PortError, Ports
 from ports.cran import Cran, CranPort
 from ports.core.internal import Stream
 from ports.core.port import PortLicense  # pylint: disable=unused-import
-from typing import Iterable, Tuple  # pylint: disable=unused-import
+from typing import BinaryIO, Iterable, Tuple  # pylint: disable=unused-import
 
 
 __author__ = "Davd Naylor <dbn@FreeBSD.org>"
@@ -38,7 +38,7 @@ def make_cran_port(name, portdir=None):
     if not distfile.exists():  # pylint: disable=no-member
         print("Fetching package source...")
         urlretrieve("https://cran.r-project.org/src/contrib/%s" % distfile.name, distfile)  # pylint: disable=no-member
-    cran = CranPort(["make"], name, portdir)
+    cran = CranPort("math", name, portdir)
     try:
         port = Ports.get_port_by_name(Cran.PKGNAMEPREFIX + name)
         cran.category = port.categories[0]
