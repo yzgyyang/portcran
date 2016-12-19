@@ -62,43 +62,45 @@ INTERNAL_PACKAGES = [
 
 @Ports.factory
 def get_cran_port(port):
-    # type: (PortStub) -> CranPort
+    # type: (PortStub) -> Port
     if port.name.startswith(Cran.PKGNAMEPREFIX):
-        portname = port.name[len(Cran.PKGNAMEPREFIX):]
-        port = CranPort(port.category, portname, port.portdir)
-        variables = make_vars(port.portdir)
+        try:
+            portname = port.name[len(Cran.PKGNAMEPREFIX):]
+            port = CranPort(port.category, portname, port.portdir)
+            variables = make_vars(port.portdir)
+            variables = port.set_variables(variables)
 
-        variables = port.set_variables(variables)
+            if "LICENSE" in variables:
+                for license_type in variables.pop("LICENSE"):
+                    port.license.add(license_type[0])
+                if "LICENSE_COMB" in variables:
+                    license_comb = variables.pop("LICENSE_COMB")
+                    assert len(license_comb) == 1
+                    port.license.combination = license_comb[0]
 
-        if "LICENSE" in variables:
-            for license_type in variables.pop("LICENSE"):
-                port.license.add(license_type[0])
-            if "LICENSE_COMB" in variables:
-                license_comb = variables.pop("LICENSE_COMB")
-                assert len(license_comb) == 1
-                port.license.combination = license_comb[0]
+            for varname, depends in port.depends:
+                if varname in variables:
+                    for depend in variables.pop(varname):
+                        depends.add(Dependency.create(depend))
 
-        for varname, depends in port.depends:
-            if varname in variables:
-                for depend in variables.pop(varname):
-                    depends.add(Dependency.create(depend))
-
-        assert len(variables["USES"])
-        for use in variables.pop("USES"):
-            uses = use.split(":")
-            assert 1 <= len(uses) <= 2
-            name = uses[0]
-            args = uses[1].split(",") if len(uses) == 2 else []
-            if name == "cran":
+            assert len(variables["USES"])
+            for use in variables.pop("USES"):
+                uses = use.split(":")
+                assert 1 <= len(uses) <= 2
+                name = uses[0]
+                args = uses[1].split(",") if len(uses) == 2 else []
+                uses = port.uses(name)
                 for arg in args:
-                    port.uses(Cran).add(arg)
-            else:
-                raise PortError("CRAN: unknown uses: %s" % name)
+                    uses.add(arg)
 
-        assert port.portname == portname
-        assert port.distname in ("${PORTNAME}_${DISTVERSION}", "${PORTNAME}_${PORTVERSION}")
-        #assert not len(variables)
-        return port
+            assert port.portname == portname
+            assert port.distname in ("${PORTNAME}_${DISTVERSION}", "${PORTNAME}_${PORTVERSION}")
+            assert not len(variables)
+            return port
+        except:
+            # XXX
+            print("Failed to load CranPort: %s" % port.origin)
+            return Port(port.category, port.name, port.portdir)
 
 
 class CranPort(Port):
@@ -146,7 +148,7 @@ class CranPort(Port):
             if name not in INTERNAL_PACKAGES:
                 try:
                     port = Ports.get_port_by_name(Cran.PKGNAMEPREFIX + name)
-                except PortError:
+                except:
                     if not optional:
                         raise
                     print("Suggested package does not exist: %s" % name)
@@ -154,9 +156,8 @@ class CranPort(Port):
                     condition = depend.group(2).replace("-", ".").replace(" ", "") if depend.group(2) else ">0"
                     depends.add(PortDependency(port, condition))
 
-    def generate(self):
+    def _gen_plist(self):
         # type: () -> None
-        super(CranPort, self).generate()
         pkg_plist = self.portdir / "pkg-plist"
         if pkg_plist.exists():
             pkg_plist.delete()
