@@ -2,10 +2,9 @@ from __future__ import absolute_import, division, print_function
 
 from re import match
 from plumbum.path import LocalPath  # pylint: disable=unused-import
-from ports import Dependency, Port, PortError, PortStub, Ports  # pylint: disable=unused-import
+from ports import Port, PortError, PortStub, Ports  # pylint: disable=unused-import
 from ports.cran.uses import Cran
 from ports.dependency import PortDependency
-from ports.core.internal import make_vars
 from ports.core.port import PortDepends  # pylint: disable=unused-import
 from typing import Callable, Dict, Union  # pylint: disable=unused-import
 
@@ -60,54 +59,6 @@ INTERNAL_PACKAGES = [
 ]
 
 
-@Ports.factory
-def get_cran_port(port):
-    # type: (PortStub) -> Port
-    if port.name.startswith(Cran.PKGNAMEPREFIX):
-        try:
-            portname = port.name[len(Cran.PKGNAMEPREFIX):]
-            port = CranPort(port.category, portname, port.portdir)
-            variables = make_vars(port.portdir)
-            port.set_variables(variables)
-
-            if "LICENSE" in variables:
-                for license_type in variables.pop("LICENSE"):
-                    port.license.add(license_type)
-                if "LICENSE_COMB" in variables:
-                    license_comb = variables.pop("LICENSE_COMB")
-                    assert len(license_comb) == 1
-                    port.license.combination = license_comb[0]
-                if "LICENSE_FILE" in variables:
-                    license_file = variables.pop("LICENSE_FILE")
-                    assert len(license_file) == 1
-                    port.license.file = license_file[0]
-
-            for varname, depends in port.depends:
-                if varname in variables:
-                    for depend in variables.pop(varname):
-                        depends.add(Dependency.create(depend))
-
-            assert len(variables["USES"])
-            for use in variables.pop("USES"):
-                uses_var = use.split(":")
-                assert 1 <= len(uses_var) <= 2
-                name = uses_var[0]
-                args = uses_var[1].split(",") if len(uses_var) == 2 else []
-                uses = port.uses(name)
-                for arg in args:
-                    uses.add(arg)
-
-            assert port.portname == portname
-            assert port.distname in ("${PORTNAME}_${DISTVERSION}", "${PORTNAME}_${PORTVERSION}")
-            assert variables.all_popped
-            return port
-        except:
-            # XXX
-            print("Failed to load CranPort: %s" % port.origin)
-            print("\tunloaded variables: %s" % variables)
-            return Port(port.category, port.name, port.portdir)
-
-
 class CranPort(Port):
     class Keywords(object):
         def __init__(self):
@@ -142,7 +93,7 @@ class CranPort(Port):
         super(CranPort, self).__init__(category, Cran.PKGNAMEPREFIX + name, portdir)
         self.distname = "${PORTNAME}_${DISTVERSION}"
         self.portname = name
-        self.uses(Cran).add("auto-plist")
+        self.uses[Cran].add("auto-plist")
 
     @staticmethod
     def _add_dependency(depends, value, optional=False):
@@ -153,13 +104,30 @@ class CranPort(Port):
             if name not in INTERNAL_PACKAGES:
                 try:
                     port = Ports.get_port_by_name(Cran.PKGNAMEPREFIX + name)
-                except:
+                except PortError:
                     if not optional:
                         raise
                     print("Suggested package does not exist: %s" % name)
                 else:
                     condition = depend.group(2).replace("-", ".").replace(" ", "") if depend.group(2) else ">0"
                     depends.add(PortDependency(port, condition))
+
+    @staticmethod
+    @Ports.factory
+    def _create(port):
+        # type: (PortStub) -> CranPort
+        if port.name.startswith(Cran.PKGNAMEPREFIX):
+            portname = port.name[len(Cran.PKGNAMEPREFIX):]
+            port = CranPort(port.category, portname, port.portdir)
+            try:
+                port.load()
+            except AssertionError:
+                # TODO: remove once all R-cran ports have been verified
+                print("Unable to load CranPort:", port.name)
+            assert port.portname == portname
+            assert port.distname in ("${PORTNAME}_${DISTVERSION}", "${PORTNAME}_${PORTVERSION}")
+            assert Cran in port.uses
+            return port
 
     def _gen_plist(self):
         # type: () -> None
@@ -194,7 +162,7 @@ class CranPort(Port):
     def parse(self, value):
         # type: (str) -> None # pylint: disable=function-redefined
         if value == "yes":
-            self.uses(Cran).add("compiles")  # type: ignore
+            self.uses[Cran].add("compiles")  # type: ignore
         elif value != "no":
             raise PortError("CRAN: unknown 'NeedsCompilation' value '%s', expected 'yes' or 'no'" % value)
 

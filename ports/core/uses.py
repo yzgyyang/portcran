@@ -1,7 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
-from abc import ABCMeta, abstractmethod
-from ports.core.internal import Orderable
+from abc import ABCMeta
+from ports.core.internal import MakeDict, Orderable  # pylint: disable=unused-import
 from typing import Callable, Dict, Iterable, List, Set  # pylint: disable=unused-import
 
 __all__ = ["Uses"]
@@ -46,8 +46,12 @@ class Uses(Orderable):
 
     def get_variable(self, name):
         # type: (str) -> List[str]
-        return None
+        pass
 
     def key(self):
         # type: () -> str
         return self.name
+
+    def load(self, variables):
+        # type: (MakeDict) -> None
+        pass

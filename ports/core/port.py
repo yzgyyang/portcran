@@ -11,10 +11,10 @@ except ImportError:
 from plumbum.cmd import make
 from plumbum.path import LocalPath  # pylint: disable=unused-import
 from ports.core.dependency import Dependency  # pylint: disable=unused-import
-from ports.core.internal import MakeDict, Orderable  # pylint: disable=unused-import
+from ports.core.internal import MakeDict, Orderable, make_vars  # pylint: disable=unused-import
 from ports.core.platform import Platform
 from ports.core.uses import Uses  # pylint: disable=unused-import
-from typing import Callable, Dict, Iterable, Iterator, List, Set, Tuple, Union  # pylint: disable=unused-import
+from typing import Any, Callable, Dict, Iterable, Iterator, List, Set, Tuple, Union  # pylint: disable=unused-import
 
 __all__ = ["Port", "PortError", "PortStub"]
 
@@ -40,6 +40,11 @@ class PortValue(Orderable):
     def key(self):
         # type: () -> Tuple[int, int]
         return self.section, self.order
+
+    @abstractmethod
+    def load(self, obj, variables):
+        # type: (Port, MakeDict) -> None
+        raise NotImplementedError()
 
 
 class PortVar(PortValue):
@@ -70,6 +75,11 @@ class PortVar(PortValue):
         assert isinstance(value, str)
         return (self.name, (value,)),
 
+    def load(self, obj, variables):
+        # type: (Port, MakeDict) -> None
+        if self.name in variables:
+            self.__set__(obj, " ".join(variables.pop(self.name)))
+
 
 class PortVarList(PortValue):
     def __init__(self, section, order, name):
@@ -97,6 +107,11 @@ class PortVarList(PortValue):
         assert isinstance(value, list)
         return (self.name, value),
 
+    def load(self, obj, variables):
+        # type: (Port, MakeDict) -> None
+        if self.name in variables:
+            obj.set_value(self, variables.pop(self.name))
+
     def setter(self, setter):
         # type: (Callable[[Port, List[str]], List[str]]) -> PortVarList
         self._setter = setter
@@ -122,6 +137,10 @@ class PortObj(PortValue):
         assert isinstance(value, PortObject)
         return value.generate()
 
+    def load(self, obj, variables):
+        # type: (Port, MakeDict) -> None
+        self.__get__(obj, Port).load(variables)
+
 
 class PortObject(object):
     __metaclass__ = ABCMeta
@@ -129,6 +148,11 @@ class PortObject(object):
     @abstractmethod
     def generate(self):
         # type: () -> Iterable[Tuple[str, Iterable[str]]]
+        raise NotImplementedError()
+
+    @abstractmethod
+    def load(self, variables):
+        # type: (MakeDict) -> None
         raise NotImplementedError()
 
 
@@ -156,6 +180,20 @@ class PortLicense(PortObject):
             yield ("LICENSE_COMB", (self.combination,))
         if self.file is not None:
             yield ("LICENSE_FILE", (self.file,))
+
+    def load(self, variables):
+        # type: (MakeDict) -> None
+        if "LICENSE" in variables:
+            for license_type in variables.pop("LICENSE"):
+                self.add(license_type)
+            if "LICENSE_COMB" in variables:
+                license_comb = variables.pop("LICENSE_COMB")
+                assert len(license_comb) == 1
+                self.combination = license_comb[0]
+            if "LICENSE_FILE" in variables:
+                license_file = variables.pop("LICENSE_FILE")
+                assert len(license_file) == 1
+                self.file = license_file[0]
 
 
 class PortDepends(PortObject):
@@ -200,6 +238,13 @@ class PortDepends(PortObject):
         # type: () -> Iterable[Tuple[str, Iterable[str]]]
         return ((k, (str(d) + "\n" for d in sorted(v))) for k, v in self._depends.items() if len(v))
 
+    def load(self, variables):
+        # type: (MakeDict) -> None
+        for name, depends in self:
+            if name in variables:
+                for depend in variables.pop(name):
+                    depends.add(Dependency.create(depend))
+
 
 class PortUses(PortObject):
     def __init__(self):
@@ -207,13 +252,19 @@ class PortUses(PortObject):
         super(PortUses, self).__init__()
         self._uses = {}  # type: Dict[type, Uses]
 
-    def __call__(self, uses):
+    def __contains__(self, item):
+        # type: (Union[type, str]) -> bool
+        if isinstance(item, str):
+            item = Uses.get(item)
+        return item in self._uses
+
+    def __getitem__(self, item):
         # type: (Union[type, str]) -> Uses
-        if isinstance(uses, str):
-            uses = Uses.get(uses)
-        if uses not in self._uses:
-            self._uses[uses] = uses()
-        return self._uses[uses]
+        if isinstance(item, str):
+            item = Uses.get(item)
+        if item not in self._uses:
+            self._uses[item] = item()
+        return self._uses[item]
 
     def get_variable(self, name, value=None):
         # type: (str, List[str]) -> List[str]
@@ -226,12 +277,25 @@ class PortUses(PortObject):
         # type: () -> Iterable[Tuple[str, Iterable[str]]]
         return ("USES", (str(u) for u in sorted(self._uses.values()))),
 
+    def load(self, variables):
+        # type: (MakeDict) -> None
+        if "USES" in variables:
+            for use in variables.pop("USES"):
+                uses_var = use.split(":")
+                assert 1 <= len(uses_var) <= 2
+                name = uses_var[0]
+                args = uses_var[1].split(",") if len(uses_var) == 2 else []
+                uses = self[name]
+                for arg in args:
+                    uses.add(arg)
+                uses.load(variables)
+
 
 class PortError(Exception):
     pass
 
 
-class PortStub(object):
+class PortStub(object):  # pylint: disable=too-few-public-methods
     def __init__(self, category, name, portdir=None):
         # type: (str, str, LocalPath) -> None
         from ports.core.ports import Ports
@@ -350,6 +414,22 @@ class Port(PortStub):
         make["-C", self.portdir, "makesum"]()
         self._gen_plist()
 
+    def load(self):
+        # type: () -> None
+        variables = make_vars(self.portdir)
+        bases = [type(self)]  # type: List[type]
+        i = 0
+        while i < len(bases):
+            bases.extend(j for j in bases[i].__bases__ if j not in bases)
+            for var in vars(bases[i]).values():
+                if isinstance(var, PortValue):
+                    var.load(self, variables)
+            i += 1
+        if not variables.all_popped:
+            # TODO: remove once all R-cran ports have been verified
+            print("Unloaded variables for %s:" % self.name, variables)
+        assert variables.all_popped
+
     def get_value(self, port_value):
         # type: (PortValue) -> Union[str, List[str], PortObject]
         return self._values[port_value]
@@ -361,20 +441,3 @@ class Port(PortStub):
     def set_value(self, port_value, value):
         # type: (PortValue, Union[str, List[str], PortObject]) -> None
         self._values[port_value] = value
-
-    def set_variables(self, variables):
-        # type: (MakeDict) -> None
-        bases = [type(self)]  # type: List[type]
-        i = 0
-        while i < len(bases):
-            bases.extend(j for j in bases[i].__bases__ if j not in bases)
-            for var in vars(bases[i]).values():
-                if isinstance(var, (PortVar, PortVarList)) and var.name in variables:
-                    value = variables.pop(var.name)
-                    if not len(value):
-                        del self._values[var]
-                    elif isinstance(var, PortVar):
-                        self._values[var] = " ".join(value)
-                    else:
-                        self._values[var] = value
-            i += 1

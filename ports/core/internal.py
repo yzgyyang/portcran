@@ -4,7 +4,7 @@ from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from re import compile as re_compile
 from plumbum.path import LocalPath  # pylint: disable=unused-import
-from typing import Callable, Iterable, List, Set  # pylint: disable=unused-import
+from typing import Any, Callable, Iterable, List, Set  # pylint: disable=unused-import
 
 __all__ = ["make_var", "make_vars", "Orderable", "Stream"]
 
@@ -53,16 +53,16 @@ class MakeDict(object):
         # type: (str) -> List[str]
         values = self._variables[item]
         subbed_values = []  # type: List[str]
-        for v in values:
-            if v.startswith("${") and v.endswith("}"):
-                variable = v[2:-1]
+        for value in values:
+            if value.startswith("${") and value.endswith("}"):
+                variable = value[2:-1]
                 if variable in self._variables:
                     subbed_values.extend(self[variable])
                     self._internal.add(variable)
                 else:
-                    subbed_values.append(v)
+                    subbed_values.append(value)
             else:
-                subbed_values.append(v)
+                subbed_values.append(value)
         return subbed_values
 
     def __str__(self):
