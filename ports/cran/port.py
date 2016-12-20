@@ -154,7 +154,9 @@ class CranPort(Port):
     def parse(self, value):
         # type: (str) -> None # pylint: disable=function-redefined
         if value == "GPL (>= 2)":
-            self.license.add("GPLv2").add("GPLv3").combination = "dual"
+            self.license.add("GPLv2+")
+        elif value == "GPL-2":
+            self.license.add("GPLv2")
         else:
             raise PortError("CRAN: unknown 'License' value '%s'" % value)
 
