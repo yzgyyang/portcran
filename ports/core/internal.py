@@ -90,11 +90,26 @@ class MakeDict(object):
         else:
             self.set(name, values)
 
-    def pop(self, name):
+    def pop(self, name, **kwargs):
         # type: (str) -> List[str]
+        if "default" in kwargs and name not in self:
+            return kwargs["default"]
         values = self[name]
         del self._variables[name]
         return values
+
+    def pop_value(self, name, **kwargs):
+        # type: (str) -> str
+        if "default" in kwargs and name not in self:
+            return kwargs["default"]
+        values = self[name]
+        del self._variables[name]
+        if "combine" in kwargs and kwargs["combine"]:
+            value = " ".join(values)
+        else:
+            assert len(values) == 1
+            value = values[0]
+        return value
 
     def set(self, name, values):
         # type: (str, List[str]) -> None
