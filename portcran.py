@@ -21,7 +21,7 @@ from typing import BinaryIO, Iterable, Tuple  # pylint: disable=unused-import
 __author__ = "Davd Naylor <dbn@FreeBSD.org>"
 __license__ = "BSD (FreeBSD)"
 __summary__ = "Generates FreeBSD Ports from CRAN packages"
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 
 
 def match_key(line):
