@@ -275,7 +275,11 @@ class PortUses(PortObject):
 
     def generate(self):
         # type: () -> Iterable[Tuple[str, Iterable[str]]]
-        return ("USES", (str(u) for u in sorted(self._uses.values()))),
+        yield ("USES", (str(u) for u in sorted(self._uses.values())))
+        for uses in sorted(self._uses.values()):
+            # TODO: convert to yield return for Python 3.3+
+            for tuple in uses.generate():
+                yield tuple
 
     def load(self, variables):
         # type: (MakeDict) -> None

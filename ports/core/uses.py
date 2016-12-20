@@ -44,6 +44,10 @@ class Uses(Orderable):
         # type: (str) -> None
         self._args.add(arg)
 
+    def generate(self):
+        # type: () -> Iterable[Tuple[str, Iterable[str]]]
+        return iter(())
+
     def get_variable(self, name):
         # type: (str) -> List[str]
         pass
