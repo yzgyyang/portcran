@@ -82,7 +82,7 @@ class PortVar(PortValue):
     def load(self, obj, variables):
         # type: (Port, MakeDict) -> None
         if self.name in variables:
-            self.__set__(obj, " ".join(variables.pop(self.name)))
+            self.__set__(obj, variables.pop_value(self.name, combine=True))
 
 
 class PortVarList(PortValue):
@@ -114,7 +114,7 @@ class PortVarList(PortValue):
     def load(self, obj, variables):
         # type: (Port, MakeDict) -> None
         if self.name in variables:
-            obj.set_value(self, variables.pop(self.name))
+            self.__set__(obj, variables.pop(self.name))
 
     def setter(self, setter):
         # type: (Callable[[Port, List[str]], List[str]]) -> PortVarList
@@ -190,14 +190,8 @@ class PortLicense(PortObject):
         if "LICENSE" in variables:
             for license_type in variables.pop("LICENSE"):
                 self.add(license_type)
-            if "LICENSE_COMB" in variables:
-                license_comb = variables.pop("LICENSE_COMB")
-                assert len(license_comb) == 1
-                self.combination = license_comb[0]
-            if "LICENSE_FILE" in variables:
-                license_file = variables.pop("LICENSE_FILE")
-                assert len(license_file) == 1
-                self.file = license_file[0]
+            self.combination = variables.pop_value("LICENSE_COMB", default=None)
+            self.file = variables.pop_value("LICENSE_FILE", default=None)
 
 
 class PortDepends(PortObject):
@@ -245,9 +239,8 @@ class PortDepends(PortObject):
     def load(self, variables):
         # type: (MakeDict) -> None
         for name, depends in self:
-            if name in variables:
-                for depend in variables.pop(name):
-                    depends.add(Dependency.create(depend))
+            for depend in variables.pop(name, default=[]):
+                depends.add(Dependency.create(depend))
 
 
 class PortUses(PortObject):
@@ -287,16 +280,15 @@ class PortUses(PortObject):
 
     def load(self, variables):
         # type: (MakeDict) -> None
-        if "USES" in variables:
-            for use in variables.pop("USES"):
-                uses_var = use.split(":")
-                assert 1 <= len(uses_var) <= 2
-                name = uses_var[0]
-                args = uses_var[1].split(",") if len(uses_var) == 2 else []
-                uses = self[name]
-                for arg in args:
-                    uses.add(arg)
-                uses.load(variables)
+        for use in variables.pop("USES", default=[]):
+            uses_var = use.split(":")
+            assert 1 <= len(uses_var) <= 2
+            name = uses_var[0]
+            args = uses_var[1].split(",") if len(uses_var) == 2 else []
+            uses = self[name]
+            for arg in args:
+                uses.add(arg)
+            uses.load(variables)
 
 
 class PortError(Exception):
