@@ -278,8 +278,8 @@ class PortUses(PortObject):
         yield ("USES", (str(u) for u in sorted(self._uses.values())))
         for uses in sorted(self._uses.values()):
             # TODO: convert to yield return for Python 3.3+
-            for tuple in uses.generate():
-                yield tuple
+            for variable in uses.generate():
+                yield variable
 
     def load(self, variables):
         # type: (MakeDict) -> None

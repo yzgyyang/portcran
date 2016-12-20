@@ -1,7 +1,8 @@
 from __future__ import absolute_import, division, print_function
 
 from ports import Uses
-from typing import Dict, List, Tuple  # pylint: disable=unused-imports
+from ports.core.internal import MakeDict  # pylint: disable=unused-import
+from typing import Dict, Iterable, List, Tuple  # pylint: disable=unused-import
 
 __all__ = ["PkgConfig", "ShebangFix"]
 
@@ -29,12 +30,13 @@ class ShebangFix(Uses):
     def generate(self):
         # type: () -> Iterable[Tuple[str, Iterable[str]]]
         if self.files:
-            yield ("SHEBANG_FILES", self.files),
+            yield ("SHEBANG_FILES", self.files)
         if self.languages:
-            yield ("SHEBANG_LANG", sorted(self.languages.keys())),
-            for lang, (old_cmd, new_cmd) in sorted(self.languages.items(), lambda x: x[0]):
-                yield ("%s_OLD_CMD" % lang, (old_cmd,)),
-                yield ("%s_CMD" % lang, (new_cmd,)),
+            yield ("SHEBANG_LANG", sorted(self.languages.keys()))
+            for lang in sorted(self.languages.keys()):
+                old_cmd, new_cmd = self.languages[lang]
+                yield ("%s_OLD_CMD" % lang, (old_cmd,))
+                yield ("%s_CMD" % lang, (new_cmd,))
 
     def load(self, variables):
         # type: (MakeDict) -> None

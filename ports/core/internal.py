@@ -4,7 +4,7 @@ from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from re import compile as re_compile
 from plumbum.path import LocalPath  # pylint: disable=unused-import
-from typing import Any, Callable, Iterable, List, Set  # pylint: disable=unused-import
+from typing import Any, Callable, Dict, Iterable, List, Set, Union  # pylint: disable=unused-import
 
 __all__ = ["make_var", "make_vars", "Orderable", "Stream"]
 
@@ -91,7 +91,7 @@ class MakeDict(object):
             self.set(name, values)
 
     def pop(self, name, **kwargs):
-        # type: (str) -> List[str]
+        # type: (str, **List[str]) -> List[str]
         if "default" in kwargs and name not in self:
             return kwargs["default"]
         values = self[name]
@@ -99,8 +99,9 @@ class MakeDict(object):
         return values
 
     def pop_value(self, name, **kwargs):
-        # type: (str) -> str
+        # type: (str, **Union[str, bool]) -> str
         if "default" in kwargs and name not in self:
+            assert isinstance(kwargs["default"], str)
             return kwargs["default"]
         values = self[name]
         del self._variables[name]
