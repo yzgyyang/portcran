@@ -295,17 +295,22 @@ class PortError(Exception):
     pass
 
 
-class PortStub(object):  # pylint: disable=too-few-public-methods
+class PortStub(object):
     def __init__(self, category, name, portdir=None):
         # type: (str, str, LocalPath) -> None
-        from ports.core.ports import Ports
         self.category = category  # type: str
         self.name = name  # type: str
-        self.portdir = Ports.dir / self.origin if portdir is None else portdir  # type: LocalPath
+        self._portdir = portdir
 
     def __repr__(self):
         # type: () -> str
         return "<Port: %s>" % self.origin
+
+    @property
+    def portdir(self):
+        # type: () -> LocalPath
+        from ports.core.ports import Ports
+        return self._portdir if self._portdir else Ports.dir / self.origin
 
     @property
     def origin(self):
