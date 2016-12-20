@@ -53,6 +53,10 @@ class PortVar(PortValue):
         super(PortVar, self).__init__(section, order)
         self.name = name
 
+    def __delete__(self, instance):
+        # type: (Port) -> None
+        instance.del_value(self)
+
     def __get__(self, instance, owner):
         # type: (Port, type) -> str
         value = instance.get_value(self) if instance.has_value(self) else None
@@ -335,6 +339,8 @@ class Port(PortStub):
 
     uses = PortObj(5, PortUses)  # type: PortUses
 
+    no_arch = PortVar(6, 1, "NO_ARCH")  # type: str
+
     def __init__(self, category, name, portdir):
         # type: (str, str, LocalPath) -> None
         super(Port, self).__init__(category, name, portdir)
@@ -433,6 +439,11 @@ class Port(PortStub):
             # TODO: remove once all R-cran ports have been verified
             print("Unloaded variables for %s:" % self.name, variables)
         assert variables.all_popped
+
+    def del_value(self, port_value):
+        # type: (PortValue) -> None
+        if port_value in self._values:
+            del self._values[port_value]
 
     def get_value(self, port_value):
         # type: (PortValue) -> Union[str, List[str], PortObject]

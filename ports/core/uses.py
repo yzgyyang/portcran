@@ -17,6 +17,10 @@ class Uses(Orderable):
         self._args = set()  # type: Set[str]
         self.name = name
 
+    def __contains__(self, item):
+        # type: (str) -> bool
+        return item in self._args
+
     def __iter__(self):
         # type: () -> Iterable[str]
         return iter(self._args)
