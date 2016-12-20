@@ -1,6 +1,15 @@
 0.x.y (dd-MMM-yy):
- - feature: allow Uses to be created via string.
- - feature: add placeholders for 'shebangfix' and 'pkgconfig' Uses.
+
+0.1.3 (20-Dec-16):
+ - feature: add placeholder for 'pkgconfig' uses.
+ - feature: add partial implementation for ShebangFix (loading and generating).
+ - refactor: allow Uses to be created via string.
+ - refactor: move loading for Makefile into respective classes.
+ - fix: updating portdir after changing category / name.
+ - fix: correctly set NO_ARCH for non-compiling packages,
+ - fix: allow uses to generate() (i.e. output variables).
+ - fix: make(1) variable expansion.
+ - fix: added LICENSE_FILE to PortLicense.
  - fix: fall back to normal Port if CranPort cannot be loaded.
  - fix: handle None pkgnameprefix.
  - fix: remove pkg-plist if present.
