@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from re import compile as re_compile
+from types import NoneType
 from plumbum.path import LocalPath  # pylint: disable=unused-import
 from typing import Any, Callable, Dict, Iterable, List, Set, Union  # pylint: disable=unused-import
 
@@ -101,11 +102,12 @@ class MakeDict(object):
     def pop_value(self, name, **kwargs):
         # type: (str, **Union[str, bool]) -> str
         if "default" in kwargs and name not in self:
-            assert isinstance(kwargs["default"], str)
+            assert isinstance(kwargs["default"], (str, NoneType))
             return kwargs["default"]
         values = self[name]
         del self._variables[name]
         if "combine" in kwargs and kwargs["combine"]:
+            assert isinstance(kwargs["combine"], bool)
             value = " ".join(values)
         else:
             assert len(values) == 1
