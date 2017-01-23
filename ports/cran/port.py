@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 from re import match
+from traceback import print_exc
 from plumbum.path import LocalPath  # pylint: disable=unused-import
 from ports import Port, PortError, PortStub, Ports  # pylint: disable=unused-import
 from ports.cran.uses import Cran
@@ -124,6 +125,7 @@ class CranPort(Port):
             except AssertionError:
                 # TODO: remove once all R-cran ports have been verified
                 print("Unable to load CranPort:", port.name)
+                print_exc()
             assert port.portname == portname
             assert port.distname in ("${PORTNAME}_${DISTVERSION}", "${PORTNAME}_${PORTVERSION}")
             assert Cran in port.uses
