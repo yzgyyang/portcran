@@ -21,7 +21,7 @@ from typing import BinaryIO, Iterable, Tuple  # pylint: disable=unused-import
 __author__ = "Davd Naylor <dbn@FreeBSD.org>"
 __license__ = "BSD (FreeBSD)"
 __summary__ = "Generates FreeBSD Ports from CRAN packages"
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 
 
 def make_cran_port(name, portdir=None):

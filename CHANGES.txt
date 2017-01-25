@@ -1,4 +1,6 @@
 0.x.y (dd-MMM-yy):
+
+0.1.4 (26-Jan-17):
  - feature: report change log.
  - fix: allow default types in MakeDict of None (fixes loading of tseries).
 
