@@ -144,11 +144,11 @@ class Orderable(object):
 
 
 class Stream(object):
-    def __init__(self, objects, filtr=lambda x: x):
+    def __init__(self, objects, filtr=lambda x: x, line=1):
         # type: (Iterable[str], Callable[[str], str]) -> None
         self._objects = list(objects)
         self._filter = filtr
-        self.line = 1
+        self.line = line
 
     @property
     def current(self):
@@ -177,13 +177,4 @@ class Stream(object):
             yield value
             self.next()
             if inclusive and not condition(value):
-                break
-
-    def take_until(self, condition):
-        # type: (Callable[[str], bool]) -> Iterable[str]
-        while self.next():
-            value = self.current
-            if not condition(value):
-                yield value
-            else:
                 break
