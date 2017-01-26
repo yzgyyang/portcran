@@ -1,5 +1,8 @@
 [MASTER]
 rcfile=.pylintrc
 
+[REPORTS]
+reports=no
+
 [FORMAT]
 max-line-length=120
