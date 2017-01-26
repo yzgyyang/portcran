@@ -145,7 +145,7 @@ class Orderable(object):
 
 class Stream(object):
     def __init__(self, objects, filtr=lambda x: x, line=1):
-        # type: (Iterable[str], Callable[[str], str]) -> None
+        # type: (Iterable[str], Callable[[str], str], int) -> None
         self._objects = list(objects)
         self._filter = filtr
         self.line = line
