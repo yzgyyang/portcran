@@ -5,13 +5,13 @@ from plumbum.cmd import make
 from plumbum.path import LocalPath
 from ports.core.internal import make_var
 from ports.core.port import Port, PortError, PortStub  # pylint: disable=unused-import
-from typing import Callable  # pylint: disable=unused-import
+from typing import Callable, List, Optional  # pylint: disable=unused-import
 
 __all__ = ["Ports"]
 
 
 class Ports(object):
-    _factories = []  # type: List[Callable[[PortStub], Port]]
+    _factories = []  # type: List[Callable[[PortStub], Optional[Port]]]
     _ports = []  # type: List[PortStub]
     dir = LocalPath(environ.get("PORTSDIR", "/usr/ports"))  # type: LocalPath
 
@@ -21,10 +21,10 @@ class Ports(object):
     @staticmethod
     def _get_port(selector):
         # type: (Callable[[PortStub], bool]) -> Port
-        if not len(Ports._ports):
+        if len(Ports._ports) == 0:
             Ports._load_ports()
         ports = [i for i in Ports._ports if selector(i)]
-        if not len(ports):
+        if len(ports) == 0:
             raise PortError("Ports: no port matches requirement")
         if len(ports) > 1:
             raise PortError("Ports: multiple ports match requirement")
@@ -63,6 +63,6 @@ class Ports(object):
 
     @staticmethod
     def factory(factory):
-        # type: (Callable[[PortStub], Port]) -> Callable[[PortStub], Port]
+        # type: (Callable[[PortStub], Optional[Port]]) -> Callable[[PortStub], Optional[Port]]
         Ports._factories.append(factory)
         return factory

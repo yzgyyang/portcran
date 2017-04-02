@@ -5,7 +5,7 @@ from collections import OrderedDict
 from re import compile as re_compile
 from types import NoneType
 from plumbum.path import LocalPath  # pylint: disable=unused-import
-from typing import Any, Callable, Dict, Iterable, List, Set, Union  # pylint: disable=unused-import
+from typing import Any, Callable, Iterable, List, Optional, Set, Union  # pylint: disable=unused-import
 
 __all__ = ["make_var", "make_vars", "Orderable", "Stream"]
 
@@ -25,7 +25,7 @@ def make_vars(portdir):
         while data.has_current:
             line = " ".join(i.rstrip("\\") for i in data.take_while(lambda x: x.endswith("\\"), inclusive=True))
             var = VARIABLE_ASSIGNMENT.search(line)
-            if var:
+            if var is not None:
                 name = var.group(1)
                 modifier = var.group(2)
                 values = var.group(3).split()
@@ -100,13 +100,13 @@ class MakeDict(object):
         return values
 
     def pop_value(self, name, **kwargs):
-        # type: (str, **Union[str, bool]) -> str
+        # type: (str, **Optional[Union[str, bool]]) -> Optional[str]
         if "default" in kwargs and name not in self:
             assert isinstance(kwargs["default"], (str, NoneType))
             return kwargs["default"]
         values = self[name]
         del self._variables[name]
-        if "combine" in kwargs and kwargs["combine"]:
+        if "combine" in kwargs and kwargs["combine"] is True:
             assert isinstance(kwargs["combine"], bool)
             value = " ".join(values)
         else:
@@ -126,7 +126,7 @@ class Orderable(object):
     def __eq__(self, other):
         # type: (object) -> bool
         assert isinstance(other, Orderable)
-        return self.key() == other.key()
+        return bool(self.key() == other.key())
 
     def __hash__(self):
         # type: () -> int
@@ -135,7 +135,7 @@ class Orderable(object):
     def __lt__(self, other):
         # type: (object) -> bool
         assert isinstance(other, Orderable)
-        return self.key() < other.key()
+        return bool(self.key() < other.key())
 
     @abstractmethod
     def key(self):

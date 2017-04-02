@@ -7,7 +7,7 @@ from ports import Port, PortError, PortStub, Ports  # pylint: disable=unused-imp
 from ports.cran.uses import Cran
 from ports.dependency import PortDependency
 from ports.core.port import PortDepends  # pylint: disable=unused-import
-from typing import Callable, Dict, Union  # pylint: disable=unused-import
+from typing import Callable, Dict, Optional, Union  # pylint: disable=unused-import
 
 __all__ = ["CranPort"]
 
@@ -110,13 +110,13 @@ class CranPort(Port):
                         raise
                     print("Suggested package does not exist: %s" % name)
                 else:
-                    condition = depend.group(2).replace("-", ".").replace(" ", "") if depend.group(2) else ">0"
+                    condition = depend.group(2).replace("-", ".").replace(" ", "") if depend.group(2) is not None else ">0"
                     depends.add(PortDependency(port, condition))
 
     @staticmethod
     @Ports.factory
     def _create(port):
-        # type: (PortStub) -> CranPort
+        # type: (PortStub) -> Optional[CranPort]
         if port.name.startswith(Cran.PKGNAMEPREFIX):
             portname = port.name[len(Cran.PKGNAMEPREFIX):]
             port = CranPort(port.category, portname, port.portdir)
@@ -130,6 +130,7 @@ class CranPort(Port):
             assert port.distname in ("${PORTNAME}_${DISTVERSION}", "${PORTNAME}_${PORTVERSION}")
             assert Cran in port.uses
             return port
+        return None
 
     def _gen_plist(self):
         # type: () -> None
@@ -166,7 +167,7 @@ class CranPort(Port):
     def parse(self, value):
         # type: (str) -> None # pylint: disable=function-redefined
         if value == "yes":
-            self.uses[Cran].add("compiles")  # type: ignore
+            self.uses[Cran].add("compiles")
             del self.no_arch
         elif value == "no":
             self.no_arch = "yes"

@@ -1,7 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 from ports import Uses
-from typing import List  # pylint: disable=unused-import
+from typing import List, Optional  # pylint: disable=unused-import
 
 __all__ = ["Cran"]
 
@@ -15,6 +15,7 @@ class Cran(Uses):
         super(Cran, self).__init__("cran")
 
     def get_variable(self, name):
-        # type: (str) -> List[str]
+        # type: (str) -> Optional[List[str]]
         if name == "PKGNAMEPREFIX":
             return [Cran.PKGNAMEPREFIX]
+        return None

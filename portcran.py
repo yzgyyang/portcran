@@ -15,7 +15,7 @@ from ports import Platform, PortError, Ports
 from ports.cran import Cran, CranPort
 from ports.core.internal import Stream
 from ports.core.port import PortLicense  # pylint: disable=unused-import
-from typing import BinaryIO, Iterable, Tuple  # pylint: disable=unused-import
+from typing import BinaryIO, Dict, Iterable, List, Tuple  # pylint: disable=unused-import
 
 
 __author__ = "Davd Naylor <dbn@FreeBSD.org>"
@@ -59,15 +59,15 @@ def parse_changelog(distfile, name):
         changelog = Stream(distfile.extractfile("%s/ChangeLog" % name).readlines(), lambda x: x.strip(), line=0)
     except NameError:
         return {}
-    log = {}
+    log = {}  # type: Dict[str, List[str]]
     version = None
     version_identifier = recompile(r"^\* DESCRIPTION \(Version\): New version is (.*)\.$")
     section = recompile(r"^\d{4}-\d{2}-\d{2} .* <.*>$")
     while changelog.next():
         for line in changelog.take_while(lambda l: not version_identifier.match(l)):
-            if section.match(line):
+            if section.match(line) is not None:
                 continue
-            if line:
+            if line is not None:
                 if version is None:
                     raise PortError("ChangeLog contains unrecognised text")
                 if line[0] in ('*', '('):
@@ -97,11 +97,11 @@ def log_depends(log, depend, difference):
     old, common, new = difference
     if not common:
         log.write(" - order %s dependencies lexicographically on origin\n" % depend)
-    if len(old):
+    if len(old) > 0:
         log.write(" - remove unused %s dependencies:\n" % depend)
         for i in sorted(old):
             log.write("   - %s\n" % i)
-    if len(new):
+    if len(new) > 0:
         log.write(" - add new %s dependencies:\n" % depend)
         for i in sorted(new):
             log.write("   - %s\n" % i)
@@ -154,9 +154,9 @@ def generate_update_log(old, new):
 
         if list(sorted(old.license)) != list(sorted(new.license)) or old.license.combination != new.license.combination:
             log.write(" - updated license to align with CRAN package\n")
-        if old.license.file is None and new.license.file:
+        if old.license.file is None and new.license.file is not None:
             log.write(" - added license file from CRAN package\n")
-        elif old.license.file and new.license.file is None:
+        elif old.license.file is not None and new.license.file is None:
             log.write(" - removed license file (no longer in CRAN package)\n")
 
         for depend in ("build", "lib", "run", "test"):

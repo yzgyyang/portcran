@@ -29,9 +29,9 @@ class ShebangFix(Uses):
 
     def generate(self):
         # type: () -> Iterable[Tuple[str, Iterable[str]]]
-        if self.files:
+        if len(self.files) > 0:
             yield ("SHEBANG_FILES", self.files)
-        if self.languages:
+        if len(self.languages) > 0:
             yield ("SHEBANG_LANG", sorted(self.languages.keys()))
             for lang in sorted(self.languages.keys()):
                 old_cmd, new_cmd = self.languages[lang]
@@ -44,4 +44,5 @@ class ShebangFix(Uses):
         for lang in variables.pop("SHEBANG_LANG", default=[]):
             old_cmd = variables.pop_value("%s_OLD_CMD" % lang)
             new_cmd = variables.pop_value("%s_CMD" % lang)
+            assert old_cmd is not None and new_cmd is not None
             self.languages[lang] = (old_cmd, new_cmd)

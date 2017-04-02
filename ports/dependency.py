@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 from re import match
 from ports import Dependency, Port, Ports  # pylint: disable=unused-import
+from typing import Optional  # pylint: disable=unused-import
 
 __all__ = ["LibDependency", "PortDependency"]
 
@@ -19,10 +20,11 @@ class LibDependency(Dependency):
     @staticmethod
     @Dependency.factory
     def _create(target, origin):
-        # type: (str, str) -> LibDependency
+        # type: (str, str) -> Optional[LibDependency]
         condition = match("lib(.*).so", target)
-        if condition:
+        if condition is not None:
             return LibDependency(condition.group(1), origin)
+        return None
 
 
 class PortDependency(Dependency):
@@ -39,9 +41,10 @@ class PortDependency(Dependency):
     @staticmethod
     @Dependency.factory
     def _create(target, origin):
-        # type: (str, str) -> PortDependency
+        # type: (str, str) -> Optional[PortDependency]
         condition = match("(.*)((?:>=|>).*)", target)
-        if condition:
+        if condition is not None:
             port = Ports.get_port_by_origin(origin)
             assert condition.group(1) == port.pkgname
             return PortDependency(port, condition.group(2))
+        return None

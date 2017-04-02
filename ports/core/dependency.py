@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 from abc import ABCMeta, abstractmethod
 from ports.core.internal import Orderable
-from typing import Callable, List  # pylint: disable=unused-import
+from typing import Callable, List, Optional  # pylint: disable=unused-import
 
 __all__ = ["Dependency"]
 
@@ -10,7 +10,7 @@ __all__ = ["Dependency"]
 class Dependency(Orderable):
     __metaclass__ = ABCMeta
 
-    _factories = []  # type: List[Callable[[str, str], Dependency]]
+    _factories = []  # type: List[Callable[[str, str], Optional[Dependency]]]
 
     def __init__(self, origin):
         # type: (str) -> None
@@ -31,7 +31,7 @@ class Dependency(Orderable):
 
     @staticmethod
     def factory(factory):
-        # type: (Callable[[str, str], Dependency]) -> Callable[[str, str], Dependency]
+        # type: (Callable[[str, str], Optional[Dependency]]) -> Callable[[str, str], Optional[Dependency]]
         Dependency._factories.append(factory)
         return factory
 

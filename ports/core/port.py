@@ -14,12 +14,15 @@ from ports.core.dependency import Dependency  # pylint: disable=unused-import
 from ports.core.internal import MakeDict, Orderable, make_vars  # pylint: disable=unused-import
 from ports.core.platform import Platform
 from ports.core.uses import Uses  # pylint: disable=unused-import
-from typing import Any, Callable, Dict, Iterable, Iterator, List, Set, Tuple, Union  # pylint: disable=unused-import
+from typing import Any, Callable, Dict, Generic, Iterable, Iterator, List, Optional, Set, Tuple, TypeVar, Union, cast  # pylint: disable=unused-import
 
 __all__ = ["Port", "PortError", "PortStub"]
 
 
-class PortValue(Orderable):
+T = TypeVar("T", covariant=True)
+
+
+class PortValue(Orderable, Generic[T]):
     __metaclass__ = ABCMeta
 
     def __init__(self, section, order=1):
@@ -29,7 +32,7 @@ class PortValue(Orderable):
 
     @abstractmethod
     def __get__(self, instance, owner):
-        # type: (Port, type) -> Any
+        # type: (Port, type) -> T
         raise NotImplementedError()
 
     @abstractmethod
@@ -47,7 +50,7 @@ class PortValue(Orderable):
         raise NotImplementedError()
 
 
-class PortVar(PortValue):
+class PortVar(PortValue[str]):
     def __init__(self, section, order, name):
         # type: (int, int, str) -> None
         super(PortVar, self).__init__(section, order)
@@ -59,14 +62,9 @@ class PortVar(PortValue):
 
     def __get__(self, instance, owner):
         # type: (Port, type) -> str
-        value = instance.get_value(self) if instance.has_value(self) else None
-        if isinstance(value, str):
-            value = instance.uses.get_variable(self.name, [value])
-        else:
-            assert value is None
-            value = instance.uses.get_variable(self.name)
-            if value is None:
-                value = [None]
+        value = instance.uses.get_variable(self.name)  # type: Optional[List[str]]
+        if value is None:
+            value = cast(List[str], instance.get_value(self))
         assert len(value) == 1
         return value[0]
 
@@ -82,24 +80,23 @@ class PortVar(PortValue):
     def load(self, obj, variables):
         # type: (Port, MakeDict) -> None
         if self.name in variables:
-            self.__set__(obj, variables.pop_value(self.name, combine=True))
+            value = variables.pop_value(self.name, combine=True)
+            assert value is not None
+            self.__set__(obj, value)
 
 
-class PortVarList(PortValue):
+class PortVarList(PortValue[List[str]]):
     def __init__(self, section, order, name):
         # type: (int, int, str) -> None
         super(PortVarList, self).__init__(section, order)
-        self._setter = lambda x, y: y
+        self._setter = lambda x, y: y  # type: Callable[[Port, List[str]], List[str]]
         self.name = name
 
     def __get__(self, instance, owner):
         # type: (Port, type) -> List[str]
-        value = instance.get_value(self) if instance.has_value(self) else None
-        if isinstance(value, list):
-            value = instance.uses.get_variable(self.name, value)
-        else:
-            assert value is None
-            value = instance.uses.get_variable(self.name)
+        value = instance.uses.get_variable(self.name)  # type: Optional[List[str]]
+        if value is None:
+            value = cast(List[str], instance.get_value(self))
         return value
 
     def __set__(self, obj, value):
@@ -122,30 +119,6 @@ class PortVarList(PortValue):
         return self
 
 
-class PortObj(PortValue):
-    def __init__(self, section, factory):
-        # type: (int, Callable[[], PortObject]) -> None
-        super(PortObj, self).__init__(section)
-        self.factory = factory
-
-    def __get__(self, instance, owner):
-        # type: (Port, type) -> PortObject
-        if not instance.has_value(self):
-            instance.set_value(self, self.factory())
-        value = instance.get_value(self)
-        assert isinstance(value, PortObject)
-        return value
-
-    def generate(self, value):
-        # type: (Union[str, List[str], PortObject]) -> Iterable[Tuple[str, Iterable[str]]]
-        assert isinstance(value, PortObject)
-        return value.generate()
-
-    def load(self, obj, variables):
-        # type: (Port, MakeDict) -> None
-        self.__get__(obj, Port).load(variables)
-
-
 class PortObject(object):
     __metaclass__ = ABCMeta
 
@@ -160,13 +133,37 @@ class PortObject(object):
         raise NotImplementedError()
 
 
-class PortLicense(PortObject):
+TPortObject = TypeVar("TPortObject", bound=PortObject)
+
+
+class PortObj(PortValue[TPortObject]):
+    def __init__(self, section, factory):
+        # type: (int, Callable[[], TPortObject]) -> None
+        super(PortObj, self).__init__(section)
+        self.factory = factory
+
+    def __get__(self, instance, owner):
+        # type: (Port, type) -> TPortObject
+        if not instance.has_value(self):
+            instance.set_value(self, self.factory())
+        return cast(TPortObject, instance.get_value(self))
+
+    def generate(self, value):
+        # type: (Union[str, List[str], PortObject]) -> Iterable[Tuple[str, Iterable[str]]]
+        return cast(TPortObject, value).generate()
+
+    def load(self, obj, variables):
+        # type: (Port, MakeDict) -> None
+        self.__get__(obj, Port).load(variables)
+
+
+class PortLicense(PortObject, Iterable[str]):
     def __init__(self):
         # type: () -> None
         super(PortLicense, self).__init__()
         self._licenses = set()  # type: Set[str]
-        self.combination = None  # type: str
-        self.file = None  # type: str
+        self.combination = None  # type: Optional[str]
+        self.file = None  # type: Optional[str]
 
     def __iter__(self):
         # type: () -> Iterator[str]
@@ -194,7 +191,7 @@ class PortLicense(PortObject):
             self.file = variables.pop_value("LICENSE_FILE", default=None)
 
 
-class PortDepends(PortObject):
+class PortDepends(PortObject, Iterable[Tuple[str, Set[Dependency]]]):
     # pylint: disable=too-few-public-methods
     class Collection(object):
         def __init__(self, depends):
@@ -263,12 +260,12 @@ class PortUses(PortObject):
             self._uses[item] = item()
         return self._uses[item]
 
-    def get_variable(self, name, value=None):
-        # type: (str, List[str]) -> List[str]
+    def get_variable(self, name):
+        # type: (str) -> Optional[List[str]]
         values = [v for v in (u.get_variable(name) for u in self._uses.values()) if v is not None]
         if len(values) > 1:
             raise PortError("PortUses: multiple uses define value for variable '%s'" % name)
-        return values[0] if len(values) else value
+        return values[0] if len(values) > 0 else None
 
     def generate(self):
         # type: () -> Iterable[Tuple[str, Iterable[str]]]
@@ -319,24 +316,24 @@ class PortStub(object):
 
 
 class Port(PortStub):
-    portname = PortVar(1, 1, "PORTNAME")  # type: str
-    portversion = PortVar(1, 2, "PORTVERSION")  # type: str
-    distversion = PortVar(1, 4, "DISTVERSION")  # type: str
-    portrevision = PortVar(1, 6, "PORTREVISION")  # type: str
-    categories = PortVarList(1, 8, "CATEGORIES")  # type: List[str]
-    pkgnameprefix = PortVar(1, 12, "PKGNAMEPREFIX")  # type: str
-    distname = PortVar(1, 14, "DISTNAME")  # type: str
+    portname = PortVar(1, 1, "PORTNAME")
+    portversion = PortVar(1, 2, "PORTVERSION")
+    distversion = PortVar(1, 4, "DISTVERSION")
+    portrevision = PortVar(1, 6, "PORTREVISION")
+    categories = PortVarList(1, 8, "CATEGORIES")
+    pkgnameprefix = PortVar(1, 12, "PKGNAMEPREFIX")
+    distname = PortVar(1, 14, "DISTNAME")
 
-    maintainer = PortVar(2, 1, "MAINTAINER")  # type: str
-    comment = PortVar(2, 2, "COMMENT")  # type: str
+    maintainer = PortVar(2, 1, "MAINTAINER")
+    comment = PortVar(2, 2, "COMMENT")
 
-    license = PortObj(3, PortLicense)  # type: PortLicense
+    license = PortObj(3, PortLicense)
 
-    depends = PortObj(4, PortDepends)  # type: PortDepends
+    depends = PortObj(4, PortDepends)
 
-    uses = PortObj(5, PortUses)  # type: PortUses
+    uses = PortObj(5, PortUses)
 
-    no_arch = PortVar(6, 1, "NO_ARCH")  # type: str
+    no_arch = PortVar(6, 1, "NO_ARCH")
 
     def __init__(self, category, name, portdir):
         # type: (str, str, LocalPath) -> None
@@ -353,11 +350,11 @@ class Port(PortStub):
 
     @staticmethod
     def _gen_footer(makefile):
-        # type: (file) -> None
+        # type: (StringIO) -> None
         makefile.write("\n.include <bsd.port.mk>\n")
 
     def _gen_header(self, makefile):
-        # type: (file) -> None
+        # type: (StringIO) -> None
         port_makefile = self.portdir / "Makefile"
         if port_makefile.exists():
             with open(port_makefile, "rU") as port_makefile:
@@ -369,7 +366,7 @@ class Port(PortStub):
         makefile.writelines((created_by, keyword))
 
     def _gen_sections(self, makefile):
-        # type: (file) -> None
+        # type: (StringIO) -> None
         for _, items in groupby(sorted(self._values.items(), key=lambda k: k[0]), lambda k: k[0].section):
             values = [j for i in items for j in i[0].generate(i[1])]
             if not len(values):
@@ -403,7 +400,7 @@ class Port(PortStub):
         # type: () -> None
         raise NotImplementedError("Generic Port does not know how to create pkg-plist")
 
-    @categories.setter  # type: ignore
+    @categories.setter
     def categories(self, categories):
         # type: (List[str]) -> List[str]
         if not len(categories) or categories[0] != self.category:
