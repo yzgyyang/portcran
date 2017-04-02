@@ -133,24 +133,24 @@ class PortObject(object):
         raise NotImplementedError()
 
 
-TPortObject = TypeVar("TPortObject", bound=PortObject)
+T2 = TypeVar("T2", bound=PortObject)
 
 
-class PortObj(PortValue[TPortObject]):
+class PortObj(PortValue[T2]):
     def __init__(self, section, factory):
-        # type: (int, Callable[[], TPortObject]) -> None
+        # type: (int, Callable[[], T2]) -> None
         super(PortObj, self).__init__(section)
         self.factory = factory
 
     def __get__(self, instance, owner):
-        # type: (Port, type) -> TPortObject
+        # type: (Port, type) -> T2
         if not instance.has_value(self):
             instance.set_value(self, self.factory())
-        return cast(TPortObject, instance.get_value(self))
+        return cast(T2, instance.get_value(self))
 
     def generate(self, value):
         # type: (Union[str, List[str], PortObject]) -> Iterable[Tuple[str, Iterable[str]]]
-        return cast(TPortObject, value).generate()
+        return cast(T2, value).generate()
 
     def load(self, obj, variables):
         # type: (Port, MakeDict) -> None

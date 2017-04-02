@@ -110,7 +110,7 @@ class CranPort(Port):
                         raise
                     print("Suggested package does not exist: %s" % name)
                 else:
-                    condition = depend.group(2).replace("-", ".").replace(" ", "") if depend.group(2) is not None else ">0"
+                    condition = depend.group(2).replace("-", ".").replace(" ", "") if not depend.group(2) else ">0"
                     depends.add(PortDependency(port, condition))
 
     @staticmethod

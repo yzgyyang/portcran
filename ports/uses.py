@@ -32,8 +32,8 @@ class ShebangFix(Uses):
         if len(self.files) > 0:
             yield ("SHEBANG_FILES", self.files)
         if len(self.languages) > 0:
-            yield ("SHEBANG_LANG", sorted(self.languages.keys()))
-            for lang in sorted(self.languages.keys()):
+            yield ("SHEBANG_LANG", sorted(self.languages))
+            for lang in sorted(self.languages):
                 old_cmd, new_cmd = self.languages[lang]
                 yield ("%s_OLD_CMD" % lang, (old_cmd,))
                 yield ("%s_CMD" % lang, (new_cmd,))
