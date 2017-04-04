@@ -1,4 +1,6 @@
 0.x.y (dd-MMM-yy):
+
+0.1.5 (04-Apr-17):
  - feature: update code to be mypy-0.501 compatiable
  - refactor: move CranPort creating code from portcran to cran/Ports
  - fix: ChangeLog parsing for cran:
