@@ -297,7 +297,7 @@ class PortError(Exception):
 
 class PortStub(object):
     def __init__(self, category, name, portdir=None):
-        # type: (str, str, LocalPath) -> None
+        # type: (str, str, Optional[LocalPath]) -> None
         self.category = category  # type: str
         self.name = name  # type: str
         self._portdir = portdir
@@ -309,8 +309,10 @@ class PortStub(object):
     @property
     def portdir(self):
         # type: () -> LocalPath
-        from ports.core.ports import Ports
-        return self._portdir if self._portdir else Ports.dir / self.origin
+        if self._portdir is None:
+            from ports.core.ports import Ports
+            return Ports.dir / self.origin
+        return self._portdir
 
     @property
     def origin(self):
@@ -339,10 +341,11 @@ class Port(PortStub):
     no_arch = PortVar(6, 1, "NO_ARCH")
 
     def __init__(self, category, name, portdir):
-        # type: (str, str, LocalPath) -> None
+        # type: (str, str, Optional[LocalPath]) -> None
         super(Port, self).__init__(category, name, portdir)
         self._values = {}  # type: Dict[PortValue, Union[str, List[str], PortObject]]
         self.categories = [category]
+        self.changelog = {}  # type: Dict[str, List[str]]
         self.maintainer = Platform.address
         self.portname = name
 

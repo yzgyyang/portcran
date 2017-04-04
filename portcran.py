@@ -2,20 +2,17 @@
 from __future__ import absolute_import, division, print_function
 
 from argparse import ArgumentParser
-from re import compile as recompile, search
+from re import search
 from sys import argv
-from tarfile import TarFile
 from urllib import urlretrieve
 try:
     from urllib2 import urlopen
 except ImportError:
     from urllib import urlopen  # type: ignore  # pylint: disable=ungrouped-imports
-from plumbum.path import LocalPath
 from ports import Platform, PortError, Ports
 from ports.cran import Cran, CranPort
-from ports.core.internal import Stream
 from ports.core.port import PortLicense  # pylint: disable=unused-import
-from typing import BinaryIO, Dict, Iterable, List, Tuple  # pylint: disable=unused-import
+from typing import BinaryIO, Iterable, List, Optional, Tuple  # pylint: disable=unused-import
 
 
 __author__ = "Davd Naylor <dbn@FreeBSD.org>"
@@ -24,75 +21,16 @@ __summary__ = "Generates FreeBSD Ports from CRAN packages"
 __version__ = "0.1.4"
 
 
-EMPTY_LOG = [
-    "",
-    "* R/*.R:",
-    "* src/*c:",
-]
-DAY3 = r"(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)"
-MONTH3 = r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)"
-DATE = r"(?:\d{4}-\d{2}-\d{2}|" + \
-    r"{day3} {month3} \d{two} \d{two}:\d{two}:\d{two} \w{three} \d{four})".format(day3=DAY3, month3=MONTH3,
-                                                                                  two="{2}", three="{3}", four="{4}")
-
-
 def make_cran_port(name, portdir=None):
-    # type: (str, LocalPath) -> CranPort
-    print("Cheching for latest version...")
+    # type: (str, Optional[str]) -> CranPort
+    print("Checking for latest version...")
     site_page = urlopen("http://cran.r-project.org/package=%s" % name).read()
     version = search(r"<td>Version:</td>\s*<td>(.*?)</td>", site_page).group(1)
     distfile = Ports.distdir / ("%s_%s.tar.gz" % (name, version))
     if not distfile.exists():  # pylint: disable=no-member
         print("Fetching package source...")
         urlretrieve("https://cran.r-project.org/src/contrib/%s" % distfile.name, distfile)  # pylint: disable=no-member
-    cran = CranPort("math", name, portdir)
-    try:
-        port = Ports.get_port_by_name(Cran.PKGNAMEPREFIX + name)
-        cran.category = port.categories[0]
-        cran.categories = port.categories
-        cran.maintainer = port.maintainer
-    except PortError:
-        pass
-    with TarFile.open(str(distfile), "r:gz") as distfile:
-        desc = Stream(i.rstrip('\n') for i in distfile.extractfile("%s/DESCRIPTION" % name).readlines())
-        cran.changelog = parse_changelog(distfile, name)
-    identifier = recompile(r"^[a-zA-Z/@]+:")
-    while desc.has_current:
-        key, value = desc.current.split(":", 1)
-        desc.next()
-        value = value.strip() + "".join(" " + i.strip() for i in desc.take_while(lambda l: not identifier.match(l)))
-        cran.parse(key, value, desc.line)  # type: ignore
-    return cran
-
-
-def parse_changelog(distfile, name):
-    # type: (TarFile, str) -> Dict[str, List[str]]
-    try:
-        changelog = Stream(distfile.extractfile("%s/ChangeLog" % name).readlines(), lambda x: x.strip(), line=0)
-    except NameError:
-        return {}
-    log = {}  # type: Dict[str, List[str]]
-    version = None
-    version_identifier = recompile(r"^\* DESCRIPTION(?: \(Version\))?: (?:New version is|Version) (.*)\.$")
-    section = recompile(r"^{date},? .* <.*>$".format(date=DATE))
-    while changelog.next():
-        for line in changelog.take_while(lambda l: not version_identifier.match(l)):
-            if line in EMPTY_LOG or section.match(line) is not None:
-                continue
-            if line is not None:
-                if version is None:
-                    raise PortError("ChangeLog contains unrecognised text")
-                if line[0] in ('*', '('):
-                    log[version].append(line[2:])
-                elif len(log[version]) == 0:
-                    log[version].append(line)
-                else:
-                    log[version][-1] += " " + line
-        if changelog.has_current:
-            version = version_identifier.search(changelog.current).group(1)
-            assert version not in log
-            log[version] = []
-    return log
+    return CranPort.create(name, distfile, portdir)
 
 
 def diff(left, right):
@@ -182,6 +120,7 @@ def generate_update_log(old, new):
             log.write(" - set NO_ARCH as port does not compile\n")
 
         if new.distversion in new.changelog:
+            assert new.distversion is not None
             log.write(" - changelog:\n")
             for line in new.changelog[new.distversion]:
                 log.write("   -")
@@ -212,10 +151,9 @@ def update():
     if args.address is not None:
         Platform.address = args.address
 
-    portdir = None if args.output is None else LocalPath(args.output)
     port = Ports.get_port_by_name(Cran.PKGNAMEPREFIX + args.name)
     assert isinstance(port, CranPort)
-    cran = make_cran_port(args.name, portdir)
+    cran = make_cran_port(args.name, args.output)
     cran.generate()
     generate_update_log(port, cran)
 
