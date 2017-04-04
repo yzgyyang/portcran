@@ -24,6 +24,13 @@ __summary__ = "Generates FreeBSD Ports from CRAN packages"
 __version__ = "0.1.4"
 
 
+EMPTY_LOG = [
+    "",
+    "* R/*.R:",
+    "* src/*c:",
+]
+
+
 def make_cran_port(name, portdir=None):
     # type: (str, LocalPath) -> CranPort
     print("Cheching for latest version...")
@@ -61,17 +68,19 @@ def parse_changelog(distfile, name):
         return {}
     log = {}  # type: Dict[str, List[str]]
     version = None
-    version_identifier = recompile(r"^\* DESCRIPTION \(Version\): New version is (.*)\.$")
+    version_identifier = recompile(r"^\* DESCRIPTION(?: \(Version\))?: New version is (.*)\.$")
     section = recompile(r"^\d{4}-\d{2}-\d{2} .* <.*>$")
     while changelog.next():
         for line in changelog.take_while(lambda l: not version_identifier.match(l)):
-            if section.match(line) is not None:
+            if line in EMPTY_LOG or section.match(line) is not None:
                 continue
             if line is not None:
                 if version is None:
                     raise PortError("ChangeLog contains unrecognised text")
                 if line[0] in ('*', '('):
                     log[version].append(line[2:])
+                elif len(log[version]) == 0:
+                    log[version].append(line)
                 else:
                     log[version][-1] += " " + line
         if changelog.has_current:
@@ -169,7 +178,7 @@ def generate_update_log(old, new):
 
         if new.distversion in new.changelog:
             log.write(" - changelog:\n")
-            for line in new.changelog[new.distname]:
+            for line in new.changelog[new.distversion]:
                 log.write("   -")
                 length = 4
                 for word in line.split(" "):
@@ -178,6 +187,7 @@ def generate_update_log(old, new):
                         log.write("\n    ")
                         length = 5 + len(word)
                     log.write(" " + word)
+                log.write("\n")
         else:
             log.write(" - no changelog provided\n")
 

@@ -50,7 +50,7 @@ class PortValue(Orderable, Generic[T]):
         raise NotImplementedError()
 
 
-class PortVar(PortValue[str]):
+class PortVar(PortValue[Optional[str]]):
     def __init__(self, section, order, name):
         # type: (int, int, str) -> None
         super(PortVar, self).__init__(section, order)
@@ -61,12 +61,15 @@ class PortVar(PortValue[str]):
         instance.del_value(self)
 
     def __get__(self, instance, owner):
-        # type: (Port, type) -> str
+        # type: (Port, type) -> Optional[str]
         value = instance.uses.get_variable(self.name)  # type: Optional[List[str]]
         if value is None:
-            value = cast(List[str], instance.get_value(self))
-        assert len(value) == 1
-        return value[0]
+            if instance.has_value(self):
+                return cast(str, instance.get_value(self))
+            return None
+        else:
+            assert len(value) == 1
+            return value[0]
 
     def __set__(self, obj, value):
         # type: (Port, str) -> None

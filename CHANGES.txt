@@ -1,5 +1,6 @@
 0.x.y (dd-MMM-yy):
  - feature: update code to be mypy-0.501 compatiable
+ -fix: CHangeLog parsing for cran `tseries`
 
 0.1.4 (26-Jan-17):
  - feature: report change log.
