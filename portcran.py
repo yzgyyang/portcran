@@ -29,6 +29,11 @@ EMPTY_LOG = [
     "* R/*.R:",
     "* src/*c:",
 ]
+DAY3 = r"(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)"
+MONTH3 = r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)"
+DATE = r"(?:\d{4}-\d{2}-\d{2}|" + \
+    r"{day3} {month3} \d{two} \d{two}:\d{two}:\d{two} \w{three} \d{four})".format(day3=DAY3, month3=MONTH3,
+                                                                                  two="{2}", three="{3}", four="{4}")
 
 
 def make_cran_port(name, portdir=None):
@@ -68,8 +73,8 @@ def parse_changelog(distfile, name):
         return {}
     log = {}  # type: Dict[str, List[str]]
     version = None
-    version_identifier = recompile(r"^\* DESCRIPTION(?: \(Version\))?: New version is (.*)\.$")
-    section = recompile(r"^\d{4}-\d{2}-\d{2} .* <.*>$")
+    version_identifier = recompile(r"^\* DESCRIPTION(?: \(Version\))?: (?:New version is|Version) (.*)\.$")
+    section = recompile(r"^{date},? .* <.*>$".format(date=DATE))
     while changelog.next():
         for line in changelog.take_while(lambda l: not version_identifier.match(l)):
             if line in EMPTY_LOG or section.match(line) is not None:
