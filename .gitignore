@@ -1,5 +1,6 @@
 .eric6project
 .idea
+.mypy_cache
 *.e4p
 MANIFEST
 build/
