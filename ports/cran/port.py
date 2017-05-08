@@ -101,7 +101,7 @@ class CranPort(Port):
             # type: (CranPort, str, str, int) -> None
             if key in self._keywords:
                 self._keywords[key](port, value)
-            elif key not in IGNORED_KEYS and False:
+            elif key not in IGNORED_KEYS:
                 raise PortError("CRAN: package key %s unknown at line %s" % (key, line))
 
     _parse = Keywords()
@@ -219,26 +219,35 @@ class CranPort(Port):
             changelog = Stream(changelog, lambda x: x.strip(), line=0)
         except NameError:
             return
-        version = None
+        version = self.distversion
+        assert version is not None
+        empty_line = recompile(r"^\* (?:R|man|src)/[^:]*:$")
         version_identifier = recompile(r"^\* DESCRIPTION(?: \(Version\))?: (?:New version is|Version) (.*)\.$")
         section = recompile(r"^{date},? .* <.*>$".format(date=DATE))
+        prev_line = ""
         while changelog.next():
             for line in changelog.take_while(lambda l: not version_identifier.match(l)):
-                if line in EMPTY_LOG or section.match(line) is not None:
+                if line == "" or section.match(line) is not None:
+                    prev_line = ""
                     continue
                 if line is not None:
-                    if version is None:
-                        raise PortError("ChangeLog contains unrecognised text")
-                    if line[0] in ('*', '('):
-                        self.changelog[version].append(line[2:])
+                    if version not in self.changelog:
+                        self.changelog[version] = []
+                    if line[:2] in ("* ", "( "):
+                        if empty_line.match(line) is None:
+                            prev_line = ""
+                            self.changelog[version].append(line[2:])
+                        else:
+                            prev_line = line[2:]
                     elif len(self.changelog[version]) == 0:
-                        self.changelog[version].append(line)
+                        self.changelog[version].append(prev_line + line)
                     else:
-                        self.changelog[version][-1] += " " + line
+                        self.changelog[version][-1] += prev_line + " " + line
+                        prev_line = ""
             if changelog.has_current:
                 version = version_identifier.search(changelog.current).group(1)
+                prev_line = ""
                 assert version not in self.changelog
-                self.changelog[version] = []
 
     def _load_descr(self, distfile):
         # type: (TarFile) -> None

@@ -27,6 +27,7 @@ class PortValue(Orderable, Generic[T]):
 
     def __init__(self, section, order=1):
         # type: (int, int) -> None
+        super(PortValue, self).__init__()
         self.order = order
         self.section = section
 
