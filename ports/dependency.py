@@ -1,10 +1,10 @@
 from __future__ import absolute_import, division, print_function
 
 from re import match
-from ports import Dependency, Port, Ports  # pylint: disable=unused-import
 from typing import Optional  # pylint: disable=unused-import
+from ports import Dependency, Port, Ports  # pylint: disable=unused-import
 
-__all__ = ["LibDependency", "PortDependency"]
+__all__ = ["LibDependency", "LocalBaseDependency", "PortDependency"]
 
 
 class LibDependency(Dependency):
@@ -21,9 +21,29 @@ class LibDependency(Dependency):
     @Dependency.factory
     def _create(target, origin):
         # type: (str, str) -> Optional[LibDependency]
-        condition = match("lib(.*).so", target)
+        condition = match(r"lib(.*).so", target)
         if condition is not None:
             return LibDependency(condition.group(1), origin)
+        return None
+
+
+class LocalBaseDependency(Dependency):
+    def __init__(self, path, origin):
+        # type: (str, str) -> None
+        super(LocalBaseDependency, self).__init__(origin)
+        self.path = path
+
+    def __str__(self):
+        # type: () -> str
+        return "${LOCALBASE}/%s:%s" % (self.path, self.origin)
+
+    @staticmethod
+    @Dependency.factory
+    def _create(target, origin):
+        # type: (str, str) -> Optional[LocalBaseDependency]
+        condition = match(r"\${LOCALBASE}/(.*)", target)
+        if condition is not None:
+            return LocalBaseDependency(condition.group(1), origin)
         return None
 
 
@@ -42,7 +62,7 @@ class PortDependency(Dependency):
     @Dependency.factory
     def _create(target, origin):
         # type: (str, str) -> Optional[PortDependency]
-        condition = match("(.*)((?:>=|>).*)", target)
+        condition = match(r"(.*)((?:>=|>).*)", target)
         if condition is not None:
             port = Ports.get_port_by_origin(origin)
             assert condition.group(1) == port.pkgname

@@ -1,8 +1,8 @@
 from __future__ import absolute_import, division, print_function
 
 from abc import ABCMeta, abstractmethod
-from ports.core.internal import Orderable
 from typing import Callable, List, Optional  # pylint: disable=unused-import
+from ports.core.internal import Orderable
 
 __all__ = ["Dependency"]
 
@@ -26,6 +26,8 @@ class Dependency(Orderable):
         # type: (str) -> Dependency
         target, origin = expression.split(":")
         dependency = [i for i in (j(target, origin) for j in Dependency._factories) if i is not None]
+        if len(dependency) == 0:
+            raise ValueError("Unknown dependency expression: %s" % expression)
         assert len(dependency) == 1
         return dependency[0]
 
