@@ -8,13 +8,13 @@ try:
     from StringIO import StringIO
 except ImportError:
     from io import StringIO  # type: ignore
+from typing import Callable, Dict, Generic, Iterable, Iterator, List, Optional, Set, Tuple, TypeVar, Union, cast  # pylint: disable=unused-import
 from plumbum.cmd import make
 from plumbum.path import LocalPath  # pylint: disable=unused-import
 from ports.core.dependency import Dependency  # pylint: disable=unused-import
 from ports.core.internal import MakeDict, Orderable, make_vars  # pylint: disable=unused-import
 from ports.core.platform import Platform
 from ports.core.uses import Uses  # pylint: disable=unused-import
-from typing import Any, Callable, Dict, Generic, Iterable, Iterator, List, Optional, Set, Tuple, TypeVar, Union, cast  # pylint: disable=unused-import
 
 __all__ = ["Port", "PortError", "PortStub"]
 
@@ -269,7 +269,7 @@ class PortUses(PortObject):
         values = [v for v in (u.get_variable(name) for u in self._uses.values()) if v is not None]
         if len(values) > 1:
             raise PortError("PortUses: multiple uses define value for variable '%s'" % name)
-        return values[0] if len(values) > 0 else None
+        return values[0] if values else None
 
     def generate(self):
         # type: () -> Iterable[Tuple[str, Iterable[str]]]
@@ -376,7 +376,7 @@ class Port(PortStub):
         # type: (StringIO) -> None
         for _, items in groupby(sorted(self._values.items(), key=lambda k: k[0]), lambda k: k[0].section):
             values = [j for i in items for j in i[0].generate(i[1])]
-            if not len(values):
+            if not values:
                 continue
             tabs = max(2, int(ceil(max(len(n[0]) for n in values) + 1.0) / Platform.tab_width))
             makefile.write("\n")
@@ -410,7 +410,7 @@ class Port(PortStub):
     @categories.setter
     def categories(self, categories):
         # type: (List[str]) -> List[str]
-        if not len(categories) or categories[0] != self.category:
+        if not categories or categories[0] != self.category:
             raise PortError("Port: invalid categories, must start with: %s" % self.category)
         return categories
 

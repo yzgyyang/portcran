@@ -1,11 +1,11 @@
 from __future__ import absolute_import, division, print_function
 
 from os import environ
+from typing import Callable, List, Optional  # pylint: disable=unused-import
 from plumbum.cmd import make
 from plumbum.path import LocalPath
 from ports.core.internal import make_var
 from ports.core.port import Port, PortError, PortStub  # pylint: disable=unused-import
-from typing import Callable, List, Optional  # pylint: disable=unused-import
 
 __all__ = ["Ports"]
 
@@ -21,10 +21,10 @@ class Ports(object):
     @staticmethod
     def _get_port(selector):
         # type: (Callable[[PortStub], bool]) -> Port
-        if len(Ports._ports) == 0:
+        if not Ports._ports:
             Ports._load_ports()
         ports = [i for i in Ports._ports if selector(i)]
-        if len(ports) == 0:
+        if not ports:
             raise PortError("Ports: no port matches requirement")
         if len(ports) > 1:
             raise PortError("Ports: multiple ports match requirement")

@@ -4,8 +4,8 @@ from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from re import compile as re_compile
 from types import NoneType
-from plumbum.path import LocalPath  # pylint: disable=unused-import
 from typing import Any, Callable, Iterable, List, Optional, Set, Union  # pylint: disable=unused-import
+from plumbum.path import LocalPath  # pylint: disable=unused-import
 
 __all__ = ["make_var", "make_vars", "Orderable", "Stream"]
 
@@ -34,7 +34,7 @@ def make_vars(portdir):
                 elif modifier == "?":
                     variables.add(name, values)
                 else:
-                    assert not len(modifier)
+                    assert not modifier
                     variables.set(name, values)
 
     return variables

@@ -1,7 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
-from ports import Uses
 from typing import List, Optional  # pylint: disable=unused-import
+from ports import Uses
 
 __all__ = ["Cran"]
 

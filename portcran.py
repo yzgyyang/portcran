@@ -4,6 +4,7 @@ from __future__ import absolute_import, division, print_function
 from argparse import ArgumentParser
 from re import search
 from sys import argv
+from typing import BinaryIO, Iterable, List, Optional, Tuple  # pylint: disable=unused-import
 from urllib import urlretrieve
 try:
     from urllib2 import urlopen
@@ -12,7 +13,6 @@ except ImportError:
 from ports import Platform, PortError, Ports
 from ports.cran import Cran, CranPort
 from ports.core.port import PortLicense  # pylint: disable=unused-import
-from typing import BinaryIO, Iterable, List, Optional, Tuple  # pylint: disable=unused-import
 
 
 __author__ = "Davd Naylor <dbn@FreeBSD.org>"
@@ -49,11 +49,11 @@ def log_depends(log, depend, difference):
     old, common, new = difference
     if not common:
         log.write(" - order %s dependencies lexicographically on origin\n" % depend)
-    if len(old) > 0:
+    if old:
         log.write(" - remove unused %s dependencies:\n" % depend)
         for i in sorted(old):
             log.write("   - %s\n" % i)
-    if len(new) > 0:
+    if new:
         log.write(" - add new %s dependencies:\n" % depend)
         for i in sorted(new):
             log.write("   - %s\n" % i)

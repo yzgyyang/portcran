@@ -3,13 +3,13 @@ from __future__ import absolute_import, division, print_function
 from re import compile as recompile, match
 from tarfile import TarFile
 from traceback import print_exc
+from typing import Callable, Dict, Optional, Union, cast  # pylint: disable=unused-import
 from plumbum.path import LocalPath  # pylint: disable=unused-import
 from ports import Port, PortError, PortStub, Ports  # pylint: disable=unused-import
 from ports.core.internal import Stream
 from ports.cran.uses import Cran
 from ports.dependency import PortDependency
 from ports.core.port import PortDepends  # pylint: disable=unused-import
-from typing import Callable, Dict, Optional, Union, cast  # pylint: disable=unused-import
 
 __all__ = ["CranPort"]
 
@@ -239,7 +239,7 @@ class CranPort(Port):
                             self.changelog[version].append(line[2:])
                         else:
                             prev_line = line[2:]
-                    elif len(self.changelog[version]) == 0:
+                    elif not self.changelog[version]:
                         self.changelog[version].append(prev_line + line)
                     else:
                         self.changelog[version][-1] += prev_line + " " + line
