@@ -76,6 +76,15 @@ DATE = r"(?:\d{4}-\d{2}-\d{2}|" + \
                                                                                   two="{2}", three="{3}", four="{4}")
 
 
+def extractfile(tar_file, name, filtr, line=1):
+    # type: (TarFile, str, Callable[[str], str], int) -> Optional[Stream]
+    try:
+        stream = tar_file.extractfile(name)
+    except NameError:
+        return None
+    return None if stream is None else Stream(stream.readlines(), filtr, line)
+
+
 class CranPort(Port):
     class Keywords(object):
         def __init__(self):
@@ -106,12 +115,15 @@ class CranPort(Port):
 
     _parse = Keywords()
 
-    def __init__(self, category, name, portdir):
-        # type: (str, str, LocalPath) -> None
+    def __init__(self, category, name, portdir, distfile=None):
+        # type: (str, str, LocalPath, Optional[TarFile]) -> None
         super(CranPort, self).__init__(category, Cran.PKGNAMEPREFIX + name, portdir)
         self.distname = "${PORTNAME}_${DISTVERSION}"
         self.portname = name
         self.uses[Cran].add("auto-plist")
+        if distfile is not None:
+            self._load_changelog(distfile)
+            self._load_descr(distfile)
 
     @staticmethod
     def _add_dependency(depends, value, optional=False):
@@ -214,10 +226,8 @@ class CranPort(Port):
 
     def _load_changelog(self, distfile):
         # type: (TarFile) -> None
-        try:
-            changelog = distfile.extractfile("%s/ChangeLog" % self.portname).readlines()
-            changelog = Stream(changelog, lambda x: x.strip(), line=0)
-        except NameError:
+        changelog = extractfile(distfile, "%s/ChangeLog" % self.portname, lambda x: x.strip(), line=0)
+        if changelog is None:
             return
         version = self.distversion
         assert version is not None
@@ -251,7 +261,9 @@ class CranPort(Port):
 
     def _load_descr(self, distfile):
         # type: (TarFile) -> None
-        desc = Stream(i.rstrip('\n') for i in distfile.extractfile("%s/DESCRIPTION" % self.portname).readlines())
+        desc = extractfile(distfile, "%s/DESCRIPTION" % self.portname, lambda x: x.rstrip('\n'))
+        if desc is None:
+            raise NameError("CRAN '%s' package missing DESCRIPTION file")
         identifier = recompile(r"^[a-zA-Z/@]+:")
         while desc.has_current:
             key, value = desc.current.split(":", 1)
@@ -272,10 +284,7 @@ class CranPort(Port):
             pass
         if portdir is not None:
             portdir = LocalPath(portdir)
-        cran = CranPort(categories[0], name, portdir)
+        cran = CranPort(categories[0], name, portdir, TarFile.open(str(distfile), "r:gz"))
         cran.maintainer = maintainer
         cran.categories = categories
-        with TarFile.open(str(distfile), "r:gz") as distfile:
-            cran._load_descr(distfile)
-            cran._load_changelog(distfile)
         return cran
