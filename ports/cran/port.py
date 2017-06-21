@@ -192,10 +192,7 @@ class CranPort(Port):
         # type: (str) -> None # pylint: disable=function-redefined
         if value == "yes":
             self.uses[Cran].add("compiles")
-            del self.no_arch
-        elif value == "no":
-            self.no_arch = "yes"
-        else:
+        elif value != "no":
             raise PortError("CRAN: unknown 'NeedsCompilation' value '%s', expected 'yes' or 'no'" % value)
 
     @_parse.keyword("Package")  # type: ignore

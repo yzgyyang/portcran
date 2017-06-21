@@ -141,9 +141,6 @@ def generate_update_log(old, new):
             new_depends = getattr(new.depends, depend)
             log_depends(log, depend, diff([i.origin for i in old_depends], sorted(i.origin for i in new_depends)))
 
-        if old.no_arch != new.no_arch and "compiles" not in new.uses[Cran]:
-            log.write(" - set NO_ARCH as port does not compile\n")
-
         if new.distversion in new.changelog:
             assert new.distversion is not None
             log.write(" - changelog:\n")
