@@ -80,7 +80,7 @@ def extractfile(tar_file, name, filtr, line=1):
     # type: (TarFile, str, Callable[[str], str], int) -> Optional[Stream]
     try:
         stream = tar_file.extractfile(name)
-    except NameError:
+    except KeyError:
         return None
     return None if stream is None else Stream(stream.readlines(), filtr, line)
 
@@ -122,8 +122,8 @@ class CranPort(Port):
         self.portname = name
         self.uses[Cran].add("auto-plist")
         if distfile is not None:
-            self._load_changelog(distfile)
             self._load_descr(distfile)
+            self._load_changelog(distfile)
 
     @staticmethod
     def _add_dependency(depends, value, optional=False):
