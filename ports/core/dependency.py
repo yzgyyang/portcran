@@ -16,6 +16,18 @@ class Dependency(Orderable):
         # type: (str) -> None
         self.origin = origin
 
+    def __eq__(self, other):
+        # type: (Dependency) -> bool
+        return self.origin == other.origin
+
+    def __hash__(self):
+        # type: () -> int
+        return hash(self.origin)
+
+    def __ne__(self, other):
+        # type: (Dependency) -> bool
+        return not self == other
+
     @abstractmethod
     def __str__(self):
         # type: () -> str
