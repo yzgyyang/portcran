@@ -195,12 +195,13 @@ class PortLicense(PortObject, Iterable[str]):
             self.file = variables.pop_value("LICENSE_FILE", default=None)
 
 
-class PortDepends(PortObject, Iterable[Tuple[str, Set[Dependency]]]):
+class PortDepends(PortObject):
     # pylint: disable=too-few-public-methods
     class Collection(object):
-        def __init__(self, depends):
-            # type: (Set[Dependency]) -> None
-            self._depends = depends
+        def __init__(self, name):
+            # type: (str) -> None
+            self.name = name
+            self._depends = []  # type: List[Dependency]
 
         def __iter__(self):
             # type: () -> Iterable[Dependency]
@@ -208,39 +209,34 @@ class PortDepends(PortObject, Iterable[Tuple[str, Set[Dependency]]]):
 
         def add(self, dependency):
             # type: (Dependency) -> None
-            self._depends.add(dependency)
-
-        def generate(self):
-            # type: () -> Iterable[str]
-            return (str(d) for d in sorted(self._depends))
+            if dependency not in self._depends:
+                self._depends.append(dependency)
+            else:
+                raise KeyError("%s: dependency '%s' already registered" % (self.name, dependency))
 
     def __init__(self):
         # type: () -> None
         super(PortDepends, self).__init__()
-        self._depends = OrderedDict()  # type: Dict[str, Set[Dependency]]
+        self._depends = []  # type: List[PortDepends.Collection]
         self.build = self._make_depends("BUILD_DEPENDS")
         self.lib = self._make_depends("LIB_DEPENDS")
         self.run = self._make_depends("RUN_DEPENDS")
         self.test = self._make_depends("TEST_DEPENDS")
 
-    def __iter__(self):
-        # type: () -> Iterator[Tuple[str, Set[Dependency]]]
-        return iter(self._depends.items())
-
     def _make_depends(self, name):
         # type: (str) -> PortDepends.Collection
-        depends = set()  # type: Set[Dependency]
-        self._depends[name] = depends
-        return PortDepends.Collection(depends)
+        depends = PortDepends.Collection(name)
+        self._depends.append(depends)
+        return depends
 
     def generate(self):
         # type: () -> Iterable[Tuple[str, Iterable[str]]]
-        return ((k, (str(d) + "\n" for d in sorted(v))) for k, v in self._depends.items() if len(v))
+        return ((i.name, (str(d) + "\n" for d in sorted(i))) for i in self._depends if any(i))
 
     def load(self, variables):
         # type: (MakeDict) -> None
-        for name, depends in self:
-            for depend in variables.pop(name, default=[]):
+        for depends in self._depends:
+            for depend in variables.pop(depends.name, default=[]):
                 depends.add(Dependency.create(depend))
 
 
