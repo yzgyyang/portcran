@@ -1,11 +1,9 @@
-from __future__ import absolute_import, division, print_function
-
 from os import environ
 from typing import Callable, List, Optional  # pylint: disable=unused-import
 from plumbum.cmd import make
 from plumbum.path import LocalPath
 from ports.core.internal import make_var
-from ports.core.port import Port, PortError, PortStub  # pylint: disable=unused-import
+from ports.core.port import CyclicalDependencyError, Port, PortError, PortStub  # pylint: disable=unused-import
 
 __all__ = ["Ports"]
 
@@ -13,6 +11,7 @@ __all__ = ["Ports"]
 class Ports(object):
     _factories = []  # type: List[Callable[[PortStub], Optional[Port]]]
     _ports = []  # type: List[PortStub]
+    _loading = []  # type: List[PortStub]
     dir = LocalPath(environ.get("PORTSDIR", "/usr/ports"))  # type: LocalPath
 
     categories = make_var(dir, "SUBDIR")
@@ -29,13 +28,23 @@ class Ports(object):
         if len(ports) > 1:
             raise PortError("Ports: multiple ports match requirement")
         if type(ports[0]) is PortStub:  # pylint: disable=unidiomatic-typecheck
-            for factory in reversed(Ports._factories):
-                port = factory(ports[0])
-                if port is not None:
-                    Ports._ports[Ports._ports.index(ports[0])] = port
-                    break
-            else:
-                raise PortError("Ports: unable to create port from origin '%s'" % ports[0].origin)
+            portstub = ports[0]
+            if portstub in Ports._loading:
+                raise CyclicalDependencyError(portstub)
+            try:
+                Ports._loading.append(portstub)
+                for factory in reversed(Ports._factories):
+                    port = factory(portstub)
+                    if port is not None:
+                        Ports._ports[Ports._ports.index(ports[0])] = port
+                        break
+                else:
+                    raise PortError("Ports: unable to create port from origin '%s'" % ports[0].origin)
+            except CyclicalDependencyError as err:
+                err.add(portstub)
+                raise
+            finally:
+                Ports._loading.remove(portstub)
         else:
             assert isinstance(ports[0], Port)
             port = ports[0]
@@ -59,6 +68,7 @@ class Ports(object):
     @staticmethod
     def get_port_by_origin(origin):
         # type: (str) -> Port
+        print(origin)
         return Ports._get_port(lambda i: i.origin == origin)
 
     @staticmethod

@@ -2,6 +2,7 @@
 .idea
 .mypy_cache
 *.e4p
+*.orig
 MANIFEST
 build/
 dist/

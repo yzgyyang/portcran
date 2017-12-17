@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from re import compile as re_compile
@@ -69,7 +67,7 @@ class MakeDict(object):
     def __str__(self):
         # type: () -> str
         unpopped = []
-        for key, value in self._variables.items():
+        for key, value in list(self._variables.items()):
             if key not in self._internal:
                 unpopped.append("%s=%s" % (key, value))
         return ", ".join(unpopped)
@@ -119,10 +117,8 @@ class MakeDict(object):
         self._variables[name] = values
 
 
-class Orderable(object):
+class Orderable(object, metaclass=ABCMeta):
     # pylint: disable=too-few-public-methods
-    __metaclass__ = ABCMeta
-
     def __eq__(self, other):
         # type: (object) -> bool
         assert isinstance(other, Orderable)
@@ -160,7 +156,7 @@ class Stream(object):
         # type: () -> bool
         return self.line != -1
 
-    def next(self):
+    def __next__(self):
         # type: () -> bool
         if 0 <= self.line < len(self._objects):
             self.line += 1
@@ -175,6 +171,6 @@ class Stream(object):
             if not inclusive and not condition(value):
                 break
             yield value
-            self.next()
+            next(self)
             if inclusive and not condition(value):
                 break

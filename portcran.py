@@ -1,21 +1,15 @@
-#!/usr/bin/env python
-from __future__ import absolute_import, division, print_function
-
+#!/usr/bin/env python3
 from argparse import ArgumentParser, Namespace  # pylint: disable=unused-import
 from re import search
 from sys import argv
-from typing import Any, BinaryIO, Callable, Dict, Iterable, List, Optional, Tuple  # pylint: disable=unused-import
-from urllib import urlretrieve
-try:
-    from urllib2 import urlopen
-except ImportError:
-    from urllib import urlopen  # type: ignore  # pylint: disable=ungrouped-imports
+from typing import BinaryIO, Callable, Iterable, List, Optional, Tuple  # pylint: disable=unused-import
+from urllib.request import urlopen, urlretrieve
 from ports import Platform, PortError, Ports
 from ports.cran import Cran, CranPort
 from ports.core.port import PortLicense  # pylint: disable=unused-import
 
 
-__author__ = "Davd Naylor <dbn@FreeBSD.org>"
+__author__ = "David Naylor <dbn@FreeBSD.org>"
 __license__ = "BSD (FreeBSD)"
 __summary__ = "Generates FreeBSD Ports from CRAN packages"
 __version__ = "0.1.5"

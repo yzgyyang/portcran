@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 from abc import ABCMeta, abstractmethod
 from typing import Callable, List, Optional  # pylint: disable=unused-import
 from ports.core.internal import Orderable
@@ -7,9 +5,7 @@ from ports.core.internal import Orderable
 __all__ = ["Dependency"]
 
 
-class Dependency(Orderable):
-    __metaclass__ = ABCMeta
-
+class Dependency(Orderable, metaclass=ABCMeta):
     _factories = []  # type: List[Callable[[str, str], Optional[Dependency]]]
 
     def __init__(self, origin):

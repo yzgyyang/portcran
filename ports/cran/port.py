@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 from re import compile as recompile, match
 from tarfile import TarFile
 from traceback import print_exc
@@ -232,7 +230,7 @@ class CranPort(Port):
         version_identifier = recompile(r"^\* DESCRIPTION(?: \(Version\))?: (?:New version is|Version) (.*)\.$")
         section = recompile(r"^{date},? .* <.*>$".format(date=DATE))
         prev_line = ""
-        while changelog.next():
+        while next(changelog):
             for line in changelog.take_while(lambda l: not version_identifier.match(l)):
                 if line == "" or section.match(line) is not None:
                     prev_line = ""
@@ -264,7 +262,7 @@ class CranPort(Port):
         identifier = recompile(r"^[a-zA-Z/@]+:")
         while desc.has_current:
             key, value = desc.current.split(":", 1)
-            desc.next()
+            next(desc)
             value = value.strip() + "".join(" " + i.strip() for i in desc.take_while(lambda l: not identifier.match(l)))
             self._parse(key, value, desc.line)  # type: ignore
 

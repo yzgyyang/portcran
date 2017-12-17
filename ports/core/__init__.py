@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 from ports.core.dependency import Dependency
 from ports.core.platform import Platform
 from ports.core.port import Port, PortError, PortStub

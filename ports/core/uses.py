@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 from abc import ABCMeta
 from typing import Callable, Dict, Iterable, List, Optional, Set, Tuple  # pylint: disable=unused-import
 from ports.core.internal import MakeDict, Orderable  # pylint: disable=unused-import
@@ -7,9 +5,7 @@ from ports.core.internal import MakeDict, Orderable  # pylint: disable=unused-im
 __all__ = ["Uses"]
 
 
-class Uses(Orderable):
-    __metaclass__ = ABCMeta
-
+class Uses(Orderable, metaclass=ABCMeta):
     _uses = {}  # type: Dict[str, type]
 
     def __init__(self, name):

@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 from typing import Dict, Iterable, List, Tuple  # pylint: disable=unused-import
 from ports import Uses
 from ports.core.internal import MakeDict  # pylint: disable=unused-import

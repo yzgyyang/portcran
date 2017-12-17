@@ -1,4 +1,5 @@
 0.x.y (dd-MMM-yy):
+ - switch to python 3
  - feature: add LocalBaseDependency for '${LOCALBASE}/path/to/file:origin'
  - refactor: add support for multiple sub-commands
  - fix: do not set NO_ARCH

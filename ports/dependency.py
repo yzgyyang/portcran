@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 from re import match
 from typing import Optional  # pylint: disable=unused-import
 from ports import Dependency, Port, Ports  # pylint: disable=unused-import

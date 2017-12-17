@@ -1,13 +1,8 @@
-from __future__ import absolute_import, division, print_function
-
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
+from io import StringIO
 from itertools import groupby
 from math import ceil, floor
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO  # type: ignore
 from typing import Callable, Dict, Generic, Iterable, Iterator, List, Optional, Set, Tuple, TypeVar, Union, cast  # pylint: disable=unused-import
 from plumbum.cmd import make
 from plumbum.path import LocalPath  # pylint: disable=unused-import
@@ -22,9 +17,7 @@ __all__ = ["Port", "PortError", "PortStub"]
 T = TypeVar("T", covariant=True)
 
 
-class PortValue(Orderable, Generic[T]):
-    __metaclass__ = ABCMeta
-
+class PortValue(Orderable, Generic[T], metaclass=ABCMeta):
     def __init__(self, section, order=1):
         # type: (int, int) -> None
         super(PortValue, self).__init__()
@@ -123,9 +116,7 @@ class PortVarList(PortValue[List[str]]):
         return self
 
 
-class PortObject(object):
-    __metaclass__ = ABCMeta
-
+class PortObject(object, metaclass=ABCMeta):
     @abstractmethod
     def generate(self):
         # type: () -> Iterable[Tuple[str, Iterable[str]]]
@@ -198,9 +189,10 @@ class PortLicense(PortObject, Iterable[str]):
 class PortDepends(PortObject):
     # pylint: disable=too-few-public-methods
     class Collection(object):
-        def __init__(self, name):
-            # type: (str) -> None
+        def __init__(self, name, delayed_load):
+            # type: (str, bool) -> None
             self.name = name
+            self.delayed_load = delayed_load
             self._depends = []  # type: List[Dependency]
 
         def __iter__(self):
@@ -221,11 +213,11 @@ class PortDepends(PortObject):
         self.build = self._make_depends("BUILD_DEPENDS")
         self.lib = self._make_depends("LIB_DEPENDS")
         self.run = self._make_depends("RUN_DEPENDS")
-        self.test = self._make_depends("TEST_DEPENDS")
+        self.test = self._make_depends("TEST_DEPENDS", delayed_load=True)
 
-    def _make_depends(self, name):
-        # type: (str) -> PortDepends.Collection
-        depends = PortDepends.Collection(name)
+   def _make_depends(self, name, delayed_load=False):
+        # type: (str, bool) -> PortDepends.Collection
+        depends = PortDepends.Collection(name, delayed_load)
         self._depends.append(depends)
         return depends
 
@@ -236,8 +228,9 @@ class PortDepends(PortObject):
     def load(self, variables):
         # type: (MakeDict) -> None
         for depends in self._depends:
-            for depend in variables.pop(depends.name, default=[]):
-                depends.add(Dependency.create(depend))
+            if not depends.delayed_load:
+                for depend in variables.pop(depends.name, default=[]):
+                    depends.add(Dependency.create(depend))
 
 
 class PortUses(PortObject):
@@ -262,7 +255,7 @@ class PortUses(PortObject):
 
     def get_variable(self, name):
         # type: (str) -> Optional[List[str]]
-        values = [v for v in (u.get_variable(name) for u in self._uses.values()) if v is not None]
+        values = [v for v in (u.get_variable(name) for u in list(self._uses.values())) if v is not None]
         if len(values) > 1:
             raise PortError("PortUses: multiple uses define value for variable '%s'" % name)
         return values[0] if values else None
@@ -290,6 +283,23 @@ class PortUses(PortObject):
 
 class PortError(Exception):
     pass
+
+
+class CyclicalDependencyError(Exception):
+    def __init__(self, portstub):
+        # type: (PortStub) -> None
+        self.cycle = [portstub]
+        self._isClosed = False
+
+    def __str__(self):
+        # type: () -> str
+        return "Cycling dependency detected: %s" % " -> ".join(p.origin for p in self.cycle)
+
+    def add(self, portstub):
+        # type: (PortStub) -> None
+        if not self._isClosed:
+            self.cycle.append(portstub)
+            self._isClosed = self.cycle[0] == portstub
 
 
 class PortStub(object):
@@ -370,7 +380,7 @@ class Port(PortStub):
 
     def _gen_sections(self, makefile):
         # type: (StringIO) -> None
-        for _, items in groupby(sorted(self._values.items(), key=lambda k: k[0]), lambda k: k[0].section):
+        for _, items in groupby(sorted(list(self._values.items()), key=lambda k: k[0]), lambda k: k[0].section):
             values = [j for i in items for j in i[0].generate(i[1])]
             if not values:
                 continue
@@ -428,7 +438,7 @@ class Port(PortStub):
         i = 0
         while i < len(bases):
             bases.extend(j for j in bases[i].__bases__ if j not in bases)
-            for var in vars(bases[i]).values():
+            for var in list(vars(bases[i]).values()):
                 if isinstance(var, PortValue):
                     var.load(self, variables)
             i += 1
