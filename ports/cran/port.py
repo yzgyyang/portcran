@@ -1,13 +1,13 @@
 from re import compile as recompile, match
 from tarfile import TarFile
 from traceback import print_exc
-from typing import Callable, Dict, Optional, Union, cast  # pylint: disable=unused-import
-from plumbum.path import LocalPath  # pylint: disable=unused-import
-from ports import Port, PortError, PortStub, Ports  # pylint: disable=unused-import
+from typing import Callable, Dict, Optional, Union, cast
+from plumbum.path import LocalPath
+from ports import Port, PortError, PortStub, Ports
 from ports.core.internal import Stream
 from ports.cran.uses import Cran
 from ports.dependency import PortDependency
-from ports.core.port import PortDepends  # pylint: disable=unused-import
+from ports.core.port import PortDepends
 
 __all__ = ["CranPort"]
 
@@ -74,38 +74,32 @@ DATE = r"(?:\d{4}-\d{2}-\d{2}|" + \
                                                                                   two="{2}", three="{3}", four="{4}")
 
 
-def extractfile(tar_file, name, filtr, line=1):
-    # type: (TarFile, str, Callable[[str], str], int) -> Optional[Stream]
+def extractfile(tar_file: TarFile, name: str, filtr: Callable[[str], str], line: int = 1) -> Optional[Stream]:
     try:
         stream = tar_file.extractfile(name)
     except KeyError:
         return None
-    return None if stream is None else Stream(stream.readlines(), filtr, line)
+    return None if stream is None else Stream((line.decode('utf-8') for line in stream.readlines()), filtr, line)
 
 
 class CranPort(Port):
     class Keywords(object):
-        def __init__(self):
-            # type: () -> None
-            self._keywords = {}  # type: Dict[str, Callable[[CranPort, str], None]]
+        def __init__(self) -> None:
+            self._keywords: Dict[str, Callable[[CranPort, str], None]] = {}
 
-        def __get__(self, instance, owner):
-            # type: (CranPort, type) -> Union[CranPort.Keywords, Callable[[str, str, int], None]]
+        def __get__(self, instance: CranPort, owner: type) -> Union[CranPort.Keywords, Callable[[str, str, int], None]]:
             if instance is None:
                 return self
             return lambda key, value, line: self.parse(instance, key, value, line)
 
-        def keyword(self, *keywords):
-            # type: (*str) -> Callable[[Callable[[CranPort, str], None]], CranPort.Keywords]
-            def assign(func):
-                # type: (Callable[[CranPort, str], None]) -> CranPort.Keywords
+        def keyword(self, *keywords: str) -> Callable[[Callable[[CranPort, str], None]], CranPort.Keywords]:
+            def assign(func: Callable[[CranPort, str], None]) -> CranPort.Keywords:
                 for keyword in keywords:
                     self._keywords[keyword] = func
                 return self
             return assign
 
-        def parse(self, port, key, value, line):
-            # type: (CranPort, str, str, int) -> None
+        def parse(self, port: CranPort, key: str, value: str, line: int) -> None:
             if key in self._keywords:
                 self._keywords[key](port, value)
             elif key not in IGNORED_KEYS:
@@ -113,8 +107,7 @@ class CranPort(Port):
 
     _parse = Keywords()
 
-    def __init__(self, category, name, portdir, distfile=None):
-        # type: (str, str, LocalPath, Optional[TarFile]) -> None
+    def __init__(self, category: str, name: str, portdir: LocalPath, distfile: Optional[TarFile] = None) -> None:
         super(CranPort, self).__init__(category, Cran.PKGNAMEPREFIX + name, portdir)
         self.distname = "${PORTNAME}_${DISTVERSION}"
         self.portname = name
@@ -124,8 +117,7 @@ class CranPort(Port):
             self._load_changelog(distfile)
 
     @staticmethod
-    def _add_dependency(depends, value, optional=False):
-        # type: (PortDepends.Collection, str, bool) -> None
+    def _add_dependency(depends: PortDepends.Collection, value: str, optional: bool = False) -> None:
         for cran in (i.strip() for i in value.split(",")):
             depend = match(r"(\w+)(?:\s*\((.*)\))?", cran)
             name = depend.group(1).strip()
@@ -142,8 +134,7 @@ class CranPort(Port):
 
     @staticmethod
     @Ports.factory
-    def _create(port):
-        # type: (PortStub) -> Optional[CranPort]
+    def _create(port: PortStub) -> Optional[CranPort]:
         if port.name.startswith(Cran.PKGNAMEPREFIX):
             portname = port.name[len(Cran.PKGNAMEPREFIX):]
             port = CranPort(port.category, portname, port.portdir)
@@ -159,25 +150,24 @@ class CranPort(Port):
             return port
         return None
 
-    def _gen_plist(self):
-        # type: () -> None
+    def _gen_plist(self) -> None:
         pkg_plist = self.portdir / "pkg-plist"
         if pkg_plist.exists():
             pkg_plist.delete()
 
-    @_parse.keyword("Depends", "Imports")  # type: ignore
-    def _parse(self, value):
-        # type: (str) -> None # pylint: disable=function-redefined
+    @_parse.keyword("Depends", "Imports")
+    def _parse(self, value: str) -> None:
+        # pylint: disable=function-redefined
         self._add_dependency(self.depends.run, value)
 
     @_parse.keyword("Description")  # type: ignore
-    def _parse(self, value):
-        # type: (str) -> None # pylint: disable=function-redefined
+    def _parse(self, value: str) -> None:
+        # pylint: disable=function-redefined
         pass
 
     @_parse.keyword("License")  # type: ignore
-    def _parse(self, value):
-        # type: (str) -> None # pylint: disable=function-redefined
+    def _parse(self, value: str) -> None:
+        # pylint: disable=function-redefined
         if value == "GPL (>= 2)":
             self.license.add("GPLv2+")
         elif value == "GPL-2":
@@ -186,41 +176,40 @@ class CranPort(Port):
             raise PortError("CRAN: unknown 'License' value '%s'" % value)
 
     @_parse.keyword("NeedsCompilation")  # type: ignore
-    def _parse(self, value):
-        # type: (str) -> None # pylint: disable=function-redefined
+    def _parse(self, value: str) -> None:
+        # pylint: disable=function-redefined
         if value == "yes":
             self.uses[Cran].add("compiles")
         elif value != "no":
             raise PortError("CRAN: unknown 'NeedsCompilation' value '%s', expected 'yes' or 'no'" % value)
 
     @_parse.keyword("Package")  # type: ignore
-    def _parse(self, value):
-        # type: (str) -> None # pylint: disable=function-redefined
+    def _parse(self, value: str) -> None:
+        # pylint: disable=function-redefined
         if self.portname != value:
             raise PortError("CRAN: package name (%s) does not match port name (%s)" % (value, self.portname))
 
     @_parse.keyword("Suggests")  # type: ignore
-    def _parse(self, value):
-        # type: (str) -> None # pylint: disable=function-redefined
+    def _parse(self, value: str) -> None:
+        # pylint: disable=function-redefined
         self._add_dependency(self.depends.test, value, optional=True)
 
     @_parse.keyword("Title")  # type: ignore
-    def _parse(self, value):
-        # type: (str) -> None # pylint: disable=function-redefined
+    def _parse(self, value: str) -> None:
+        # pylint: disable=function-redefined
         self.comment = value
 
     @_parse.keyword("URL")  # type: ignore
-    def _parse(self, value):
-        # type: (str) -> None # pylint: disable=function-redefined
+    def _parse(self, value: str) -> None:
+        # pylint: disable=function-redefined
         pass
 
     @_parse.keyword("Version")  # type: ignore
-    def _parse(self, value):
-        # type: (str) -> None # pylint: disable=function-redefined
+    def _parse(self, value: str) -> None:
+        # pylint: disable=function-redefined
         self.distversion = value
 
-    def _load_changelog(self, distfile):
-        # type: (TarFile) -> None
+    def _load_changelog(self, distfile: TarFile) -> None:
         changelog = extractfile(distfile, "%s/ChangeLog" % self.portname, lambda x: x.strip(), line=0)
         if changelog is None:
             return
@@ -230,7 +219,7 @@ class CranPort(Port):
         version_identifier = recompile(r"^\* DESCRIPTION(?: \(Version\))?: (?:New version is|Version) (.*)\.$")
         section = recompile(r"^{date},? .* <.*>$".format(date=DATE))
         prev_line = ""
-        while next(changelog):
+        while True:
             for line in changelog.take_while(lambda l: not version_identifier.match(l)):
                 if line == "" or section.match(line) is not None:
                     prev_line = ""
@@ -249,13 +238,14 @@ class CranPort(Port):
                     else:
                         self.changelog[version][-1] += prev_line + " " + line
                         prev_line = ""
-            if changelog.has_current:
-                version = version_identifier.search(changelog.current).group(1)
+            try:
+                version = version_identifier.search(next(changelog)).group(1)
                 prev_line = ""
                 assert version not in self.changelog
+            except StopIteration:
+                break
 
-    def _load_descr(self, distfile):
-        # type: (TarFile) -> None
+    def _load_descr(self, distfile: TarFile) -> None:
         desc = extractfile(distfile, "%s/DESCRIPTION" % self.portname, lambda x: x.rstrip('\n'))
         if desc is None:
             raise NameError("CRAN '%s' package missing DESCRIPTION file")
@@ -267,8 +257,7 @@ class CranPort(Port):
             self._parse(key, value, desc.line)  # type: ignore
 
     @staticmethod
-    def create(name, distfile, portdir=None):
-        # type: (str, LocalPath, Optional[str]) -> CranPort
+    def create(name: str, distfile: LocalPath, portdir: Optional[str] = None) -> CranPort:
         categories = ["math"]
         maintainer = "ports@FreeBSD.org"
         try:

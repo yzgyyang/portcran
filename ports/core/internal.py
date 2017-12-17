@@ -1,22 +1,19 @@
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from re import compile as re_compile
-from types import NoneType
-from typing import Any, Callable, Iterable, List, Optional, Set, Union  # pylint: disable=unused-import
-from plumbum.path import LocalPath  # pylint: disable=unused-import
+from typing import Any, Callable, Iterable, Iterator, List, Optional, Set, Union
+from plumbum.path import LocalPath
 
 __all__ = ["make_var", "make_vars", "Orderable", "Stream"]
 
 VARIABLE_ASSIGNMENT = re_compile(r"^\s*(\w+)\s*([+?:]?)=(.*)$")
 
 
-def make_var(portdir, var):
-    # type: (LocalPath, str) -> List[str]
+def make_var(portdir: LocalPath, var: str) -> List[str]:
     return make_vars(portdir)[var]
 
 
-def make_vars(portdir):
-    # type: (LocalPath) -> MakeDict
+def make_vars(portdir: LocalPath) -> "MakeDict":
     variables = MakeDict()
     with open(portdir / "Makefile", "r") as makefile:
         data = Stream(makefile.readlines(), lambda x: x.split("#", 2)[0].rstrip())
@@ -39,19 +36,16 @@ def make_vars(portdir):
 
 
 class MakeDict(object):
-    def __init__(self):
-        # type: () -> None
-        self._variables = OrderedDict()  # type: OrderedDict[str, List[str]]
-        self._internal = set()  # type: Set[str]
+    def __init__(self) -> None:
+        self._variables: OrderedDict[str, List[str]] = OrderedDict()
+        self._internal: Set[str] = set()
 
-    def __contains__(self, item):
-        # type: (str) -> bool
+    def __contains__(self, item: str) -> bool:
         return item in self._variables
 
-    def __getitem__(self, item):
-        # type: (str) -> List[str]
+    def __getitem__(self, item: str) -> List[str]:
         values = self._variables[item]
-        subbed_values = []  # type: List[str]
+        subbed_values: List[str] = []
         for value in values:
             if value.startswith("${") and value.endswith("}"):
                 variable = value[2:-1]
@@ -64,43 +58,37 @@ class MakeDict(object):
                 subbed_values.append(value)
         return subbed_values
 
-    def __str__(self):
-        # type: () -> str
+    def __str__(self) -> str:
         unpopped = []
         for key, value in list(self._variables.items()):
             if key not in self._internal:
                 unpopped.append("%s=%s" % (key, value))
         return ", ".join(unpopped)
 
-    def add(self, name, values):
-        # type: (str, List[str]) -> None
+    def add(self, name: str, values: List[str]) -> None:
         if name not in self._variables:
             self.set(name, values)
 
     @property
-    def all_popped(self):
-        # type: () -> bool
+    def all_popped(self) -> bool:
         return len(self._internal) == len(self._variables)
 
-    def extend(self, name, values):
-        # type: (str, List[str]) -> None
+    def extend(self, name: str, values: List[str]) -> None:
         if name in self._variables:
             self._variables[name].extend(values)
         else:
             self.set(name, values)
 
-    def pop(self, name, **kwargs):
-        # type: (str, **List[str]) -> List[str]
+    def pop(self, name: str, **kwargs: List[str]) -> List[str]:
         if "default" in kwargs and name not in self:
             return kwargs["default"]
         values = self[name]
         del self._variables[name]
         return values
 
-    def pop_value(self, name, **kwargs):
-        # type: (str, **Optional[Union[str, bool]]) -> Optional[str]
+    def pop_value(self, name: str, **kwargs: Optional[Union[str, bool]]) -> Optional[str]:
         if "default" in kwargs and name not in self:
-            assert isinstance(kwargs["default"], (str, NoneType))
+            assert kwargs["default"] is None or isinstance(kwargs["default"], str)
             return kwargs["default"]
         values = self[name]
         del self._variables[name]
@@ -112,65 +100,57 @@ class MakeDict(object):
             value = values[0]
         return value
 
-    def set(self, name, values):
-        # type: (str, List[str]) -> None
+    def set(self, name: str, values: List[str]) -> None:
         self._variables[name] = values
 
 
 class Orderable(object, metaclass=ABCMeta):
     # pylint: disable=too-few-public-methods
-    def __eq__(self, other):
-        # type: (object) -> bool
+    def __eq__(self, other: object) -> bool:
         assert isinstance(other, Orderable)
         return bool(self.key() == other.key())
 
-    def __hash__(self):
-        # type: () -> int
+    def __hash__(self) -> int:
         return hash(self.key())
 
-    def __lt__(self, other):
-        # type: (object) -> bool
+    def __lt__(self, other: object) -> bool:
         assert isinstance(other, Orderable)
         return bool(self.key() < other.key())
 
     @abstractmethod
-    def key(self):
-        # type: () -> Any
+    def key(self) -> Any:
         raise NotImplementedError()
 
 
-class Stream(object):
-    def __init__(self, objects, filtr=lambda x: x, line=1):
-        # type: (Iterable[str], Callable[[str], str], int) -> None
+class Stream(Iterator[str]):
+    def __init__(self, objects: Iterable[str], filtr: Callable[[str], str] = lambda x: x, line: int = 1) -> None:
         self._objects = list(objects)
         self._filter = filtr
         self.line = line
 
+    def __iter__(self) -> Iterator[str]:
+        return self
+
+    def __next__(self) -> str:
+        if 0 <= self.line < len(self._objects):
+            self.line += 1
+            return self._filter(self._objects[self.line - 1])
+        else:
+            raise StopIteration
+
     @property
-    def current(self):
-        # type: () -> str
+    def current(self) -> str:
         return self._filter(self._objects[self.line - 1])
 
     @property
-    def has_current(self):
-        # type: () -> bool
+    def has_current(self) -> bool:
         return self.line != -1
 
-    def __next__(self):
-        # type: () -> bool
-        if 0 <= self.line < len(self._objects):
-            self.line += 1
-            return True
-        self.line = -1
-        return False
-
-    def take_while(self, condition, inclusive=False):
-        # type: (Callable[[str], bool], bool) -> Iterable[str]
-        while self.has_current:
-            value = self.current
+    def take_while(self, condition: Callable[[str], bool], inclusive: bool = False) -> Iterator[str]:
+        for value in self:
             if not inclusive and not condition(value):
+                self.line -= 1
                 break
             yield value
-            next(self)
             if inclusive and not condition(value):
                 break

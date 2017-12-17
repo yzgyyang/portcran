@@ -1,62 +1,50 @@
 from abc import ABCMeta
-from typing import Callable, Dict, Iterable, List, Optional, Set, Tuple  # pylint: disable=unused-import
-from ports.core.internal import MakeDict, Orderable  # pylint: disable=unused-import
+from typing import Callable, ClassVar, Dict, Iterable, List, Optional, Set, Tuple
+from ports.core.internal import MakeDict, Orderable
 
 __all__ = ["Uses"]
 
 
 class Uses(Orderable, metaclass=ABCMeta):
-    _uses = {}  # type: Dict[str, type]
+    _uses: ClassVar[Dict[str, type]] = {}
 
-    def __init__(self, name):
-        # type: (str) -> None
-        self._args = set()  # type: Set[str]
+    def __init__(self, name: str) -> None:
+        self._args: Set[str] = set()
         self.name = name
 
-    def __contains__(self, item):
-        # type: (str) -> bool
+    def __contains__(self, item: str) -> bool:
         return item in self._args
 
-    def __iter__(self):
-        # type: () -> Iterable[str]
+    def __iter__(self) -> Iterable[str]:
         return iter(self._args)
 
-    def __str__(self):
-        # type: () -> str
+    def __str__(self) -> str:
         return self.name + (":" + ",".join(sorted(self._args)) if self._args else "")
 
     @staticmethod
-    def get(name):
-        # type: (str) -> type
+    def get(name: str) -> type:
         return Uses._uses[name]
 
     @staticmethod
-    def register(name):
-        # type: (str) -> Callable[[type], type]
-        def doregister(klass):
-            # type: (type) -> type
+    def register(name: str) -> Callable[[type], type]:
+        def doregister(klass: type) -> type:
             assert issubclass(klass, Uses)
             Uses._uses[name] = klass
             return klass
         return doregister
 
-    def add(self, arg):
-        # type: (str) -> None
+    def add(self, arg: str) -> None:
         self._args.add(arg)
 
-    def generate(self):
-        # type: () -> Iterable[Tuple[str, Iterable[str]]]
+    def generate(self) -> Iterable[Tuple[str, Iterable[str]]]:
         # pylint: disable=no-self-use
         return iter(())
 
-    def get_variable(self, name):
-        # type: (str) -> Optional[List[str]]
+    def get_variable(self, name: str) -> Optional[List[str]]:
         pass
 
-    def key(self):
-        # type: () -> str
+    def key(self) -> str:
         return self.name
 
-    def load(self, variables):
-        # type: (MakeDict) -> None
+    def load(self, variables: MakeDict) -> None:
         pass

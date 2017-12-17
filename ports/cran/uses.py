@@ -1,4 +1,4 @@
-from typing import List, Optional  # pylint: disable=unused-import
+from typing import List, Optional
 from ports import Uses
 
 __all__ = ["Cran"]
@@ -8,12 +8,10 @@ __all__ = ["Cran"]
 class Cran(Uses):
     PKGNAMEPREFIX = "R-cran-"
 
-    def __init__(self):
-        # type: () -> None
+    def __init__(self) -> None:
         super(Cran, self).__init__("cran")
 
-    def get_variable(self, name):
-        # type: (str) -> Optional[List[str]]
+    def get_variable(self, name: str) -> Optional[List[str]]:
         if name == "PKGNAMEPREFIX":
             return [Cran.PKGNAMEPREFIX]
         return None

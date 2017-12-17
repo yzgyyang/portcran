@@ -1,24 +1,21 @@
 from re import match
-from typing import Optional  # pylint: disable=unused-import
-from ports import Dependency, Port, Ports  # pylint: disable=unused-import
+from typing import Optional
+from ports import Dependency, Port, Ports
 
 __all__ = ["LibDependency", "LocalBaseDependency", "PortDependency"]
 
 
 class LibDependency(Dependency):
-    def __init__(self, libname, origin):
-        # type: (str, str) -> None
+    def __init__(self, libname: str, origin: str) -> None:
         super(LibDependency, self).__init__(origin)
         self.libname = libname
 
-    def __str__(self):
-        # type: () -> str
+    def __str__(self) -> str:
         return "lib%s.so:%s" % (self.libname, self.origin)
 
     @staticmethod
     @Dependency.factory
-    def _create(target, origin):
-        # type: (str, str) -> Optional[LibDependency]
+    def _create(target: str, origin: str) -> Optional[LibDependency]:
         condition = match(r"lib(.*).so", target)
         if condition is not None:
             return LibDependency(condition.group(1), origin)
@@ -26,19 +23,16 @@ class LibDependency(Dependency):
 
 
 class LocalBaseDependency(Dependency):
-    def __init__(self, path, origin):
-        # type: (str, str) -> None
+    def __init__(self, path: str, origin: str) -> None:
         super(LocalBaseDependency, self).__init__(origin)
         self.path = path
 
-    def __str__(self):
-        # type: () -> str
+    def __str__(self) -> str:
         return "${LOCALBASE}/%s:%s" % (self.path, self.origin)
 
     @staticmethod
     @Dependency.factory
-    def _create(target, origin):
-        # type: (str, str) -> Optional[LocalBaseDependency]
+    def _create(target: str, origin: str) -> Optional[LocalBaseDependency]:
         condition = match(r"\${LOCALBASE}/(.*)", target)
         if condition is not None:
             return LocalBaseDependency(condition.group(1), origin)
@@ -46,20 +40,17 @@ class LocalBaseDependency(Dependency):
 
 
 class PortDependency(Dependency):
-    def __init__(self, port, condition=">0"):
-        # type: (Port, str) -> None
+    def __init__(self, port: Port, condition: str = ">0") -> None:
         super(PortDependency, self).__init__(port.origin)
         self.port = port
         self.condition = condition
 
-    def __str__(self):
-        # type: () -> str
+    def __str__(self) -> str:
         return "%s%s:%s" % (self.port.pkgname, self.condition, self.origin)
 
     @staticmethod
     @Dependency.factory
-    def _create(target, origin):
-        # type: (str, str) -> Optional[PortDependency]
+    def _create(target: str, origin: str) -> Optional[PortDependency]:
         condition = match(r"(.*)((?:>=|>).*)", target)
         if condition is not None:
             port = Ports.get_port_by_origin(origin)

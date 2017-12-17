@@ -1,25 +1,24 @@
 from os import environ
-from typing import Callable, List, Optional  # pylint: disable=unused-import
+from typing import Callable, ClassVar, List, Optional
 from plumbum.cmd import make
 from plumbum.path import LocalPath
 from ports.core.internal import make_var
-from ports.core.port import CyclicalDependencyError, Port, PortError, PortStub  # pylint: disable=unused-import
+from ports.core.port import CyclicalDependencyError, Port, PortError, PortStub
 
 __all__ = ["Ports"]
 
 
 class Ports(object):
-    _factories = []  # type: List[Callable[[PortStub], Optional[Port]]]
-    _ports = []  # type: List[PortStub]
-    _loading = []  # type: List[PortStub]
-    dir = LocalPath(environ.get("PORTSDIR", "/usr/ports"))  # type: LocalPath
+    _factories: ClassVar[List[Callable[[PortStub], Optional[Port]]]] = []
+    _ports: ClassVar[List[PortStub]] = []
+    _loading: ClassVar[List[PortStub]] = []
+    dir: ClassVar[LocalPath] = LocalPath(environ.get("PORTSDIR", "/usr/ports"))
 
     categories = make_var(dir, "SUBDIR")
     distdir = LocalPath(make["-C", dir / "Mk", "-VDISTDIR", "-fbsd.port.mk"]().strip())
 
     @staticmethod
-    def _get_port(selector):
-        # type: (Callable[[PortStub], bool]) -> Port
+    def _get_port(selector: Callable[[PortStub], bool]) -> Port:
         if not Ports._ports:
             Ports._load_ports()
         ports = [i for i in Ports._ports if selector(i)]
@@ -27,7 +26,7 @@ class Ports(object):
             raise PortError("Ports: no port matches requirement")
         if len(ports) > 1:
             raise PortError("Ports: multiple ports match requirement")
-        if type(ports[0]) is PortStub:  # pylint: disable=unidiomatic-typecheck
+        if isinstance(ports[0], PortStub):
             portstub = ports[0]
             if portstub in Ports._loading:
                 raise CyclicalDependencyError(portstub)
@@ -51,28 +50,23 @@ class Ports(object):
         return port
 
     @staticmethod
-    def _load_ports():
-        # type: () -> None
+    def _load_ports() -> None:
         print("Loading ports collection:")
         for category in Ports.categories:
             print("\tLoading category: %s" % category)
             for name in make_var(Ports.dir / category, "SUBDIR"):
-                name = str(name)  # NOTE: remove in Python 3
                 Ports._ports.append(PortStub(category, name))
 
     @staticmethod
-    def get_port_by_name(name):
-        # type: (str) -> Port
+    def get_port_by_name(name: str) -> Port:
         return Ports._get_port(lambda i: i.name == name)
 
     @staticmethod
-    def get_port_by_origin(origin):
-        # type: (str) -> Port
+    def get_port_by_origin(origin: str) -> Port:
         print(origin)
         return Ports._get_port(lambda i: i.origin == origin)
 
     @staticmethod
-    def factory(factory):
-        # type: (Callable[[PortStub], Optional[Port]]) -> Callable[[PortStub], Optional[Port]]
+    def factory(factory: Callable[[PortStub], Optional[Port]]) -> Callable[[PortStub], Optional[Port]]:
         Ports._factories.append(factory)
         return factory

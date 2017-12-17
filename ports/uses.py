@@ -1,16 +1,14 @@
-from typing import Dict, Iterable, List, Tuple  # pylint: disable=unused-import
+from typing import Dict, Iterable, List, Tuple
 from ports import Uses
-from ports.core.internal import MakeDict  # pylint: disable=unused-import
+from ports.core.internal import MakeDict
 
 __all__ = ["PkgConfig", "ShebangFix"]
 
 
-def create_uses(name):
-    # type: (str) -> type
+def create_uses(name: str) -> type:
     @Uses.register(name)
     class UsesClass(Uses):
-        def __init__(self):
-            # type: () -> None
+        def __init__(self) -> None:
             super(UsesClass, self).__init__(name)
     return UsesClass
 
@@ -19,14 +17,12 @@ PkgConfig = create_uses("pkgconfig")
 
 @Uses.register("shebangfix")
 class ShebangFix(Uses):
-    def __init__(self):
-        # type: () -> None
+    def __init__(self) -> None:
         super(ShebangFix, self).__init__("shebangfix")
-        self.files = []  # type: List[str]
-        self.languages = {}  # type: Dict[str, Tuple[str, str]]
+        self.files: List[str] = []
+        self.languages: Dict[str, Tuple[str, str]] = {}
 
-    def generate(self):
-        # type: () -> Iterable[Tuple[str, Iterable[str]]]
+    def generate(self) -> Iterable[Tuple[str, Iterable[str]]]:
         if self.files:
             yield ("SHEBANG_FILES", self.files)
         if self.languages:
@@ -36,8 +32,7 @@ class ShebangFix(Uses):
                 yield ("%s_OLD_CMD" % lang, (old_cmd,))
                 yield ("%s_CMD" % lang, (new_cmd,))
 
-    def load(self, variables):
-        # type: (MakeDict) -> None
+    def load(self, variables: MakeDict) -> None:
         self.files = variables.pop("SHEBANG_FILES", default=[])
         for lang in variables.pop("SHEBANG_LANG", default=[]):
             old_cmd = variables.pop_value("%s_OLD_CMD" % lang)
