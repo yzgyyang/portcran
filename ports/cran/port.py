@@ -11,22 +11,23 @@ from ports.utilities import Stream
 __all__ = ["CranPort"]
 
 IGNORED_KEYS = [
-    "Author",
-    "Authors@R",
-    "ByteCompile",
-    "Date",
-    "Date/Publication",
-    "Encoding",
-    "ImportsNote",
-    "LazyData",
-    "LazyLoad",
-    "Maintainer",
-    "Note",
-    "Packaged",
-    "Repository",
-    "Repository/R-Forge/DateTimeStamp",
-    "Repository/R-Forge/Project",
-    "Repository/R-Forge/Revision",
+    "author",
+    "authors@r",
+    "bytecompile",
+    "date",
+    "date/publication",
+    "encoding",
+    "importsnote",
+    "lazydata",
+    "lazyload",
+    "maintainer",
+    "note",
+    "packaged",
+    "repository",
+    "repository/r-forge/datetimestamp",
+    "repository/r-forge/project",
+    "repository/r-forge/revision",
+    "revision",
 ]
 
 INTERNAL_PACKAGES = [
@@ -136,7 +137,7 @@ class CranPort(Port):
         def parse(self, port: "CranPort", key: str, value: str, line: int) -> None:
             if key in self._keywords:
                 self._keywords[key](port, value)
-            elif key not in IGNORED_KEYS:
+            elif key.lower() not in IGNORED_KEYS:
                 raise PortError("CRAN: package key %s unknown at line %s" % (key, line))
 
     _parse = Keywords()
