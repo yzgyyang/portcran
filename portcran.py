@@ -22,7 +22,10 @@ class Command(object):
 
     def execute(self, args: List[str]) -> None:
         parsed_args = self._parser.parse_args(args)
-        parsed_args.action(parsed_args)
+        if hasattr(parsed_args, "action"):
+            parsed_args.action(parsed_args)
+        else:
+            self.usage()
 
     def usage(self) -> None:
         self._parser.print_usage()
@@ -37,7 +40,7 @@ class Command(object):
 
 def make_cran_port(name: str, portdir: Optional[str] = None) -> CranPort:
     print("Checking for latest version...")
-    site_page = urlopen("http://cran.r-project.org/package=%s" % name).read()
+    site_page = urlopen("http://cran.r-project.org/package=%s" % name).read().decode("utf-8")
     version = search(r"<td>Version:</td>\s*<td>(.*?)</td>", str(site_page)).group(1)
     distfile = Ports.distdir / ("%s_%s.tar.gz" % (name, version))
     if not distfile.exists():  # pylint: disable=no-member
