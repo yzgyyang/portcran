@@ -3,7 +3,7 @@ from typing import Callable, ClassVar, List, Optional
 from plumbum.cmd import make
 from plumbum.path import LocalPath
 from ports.core.internal import make_var
-from ports.core.port import CyclicalDependencyError, Port, PortError, PortStub
+from ports.core.port import Port, PortError, PortStub
 
 __all__ = ["Ports"]
 
@@ -11,7 +11,6 @@ __all__ = ["Ports"]
 class Ports(object):
     _factories: ClassVar[List[Callable[[PortStub], Optional[Port]]]] = []
     _ports: ClassVar[List[PortStub]] = []
-    _loading: ClassVar[List[PortStub]] = []
     dir: ClassVar[LocalPath] = LocalPath(environ.get("PORTSDIR", "/usr/ports"))
 
     categories = make_var(dir, "SUBDIR")
@@ -28,22 +27,13 @@ class Ports(object):
             raise PortError("Ports: multiple ports match requirement")
         if isinstance(ports[0], PortStub):
             portstub = ports[0]
-            if portstub in Ports._loading:
-                raise CyclicalDependencyError(portstub)
-            try:
-                Ports._loading.append(portstub)
-                for factory in reversed(Ports._factories):
-                    port = factory(portstub)
-                    if port is not None:
-                        Ports._ports[Ports._ports.index(ports[0])] = port
-                        break
-                else:
-                    raise PortError("Ports: unable to create port from origin '%s'" % ports[0].origin)
-            except CyclicalDependencyError as err:
-                err.add(portstub)
-                raise
-            finally:
-                Ports._loading.remove(portstub)
+            for factory in reversed(Ports._factories):
+                port = factory(portstub)
+                if port is not None:
+                    Ports._ports[Ports._ports.index(ports[0])] = port
+                    break
+            else:
+                raise PortError("Ports: unable to create port from origin '%s'" % ports[0].origin)
         else:
             assert isinstance(ports[0], Port)
             port = ports[0]

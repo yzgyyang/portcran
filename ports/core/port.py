@@ -241,21 +241,6 @@ class PortError(Exception):
     pass
 
 
-class CyclicalDependencyError(Exception):
-    def __init__(self, portstub: "PortStub") -> None:
-        super().__init__()
-        self.cycle = [portstub]
-        self._is_closed = False
-
-    def __str__(self) -> str:
-        return "Cycling dependency detected: %s" % " -> ".join(p.origin for p in self.cycle)
-
-    def add(self, portstub: "PortStub") -> None:
-        if not self._is_closed:
-            self.cycle.append(portstub)
-            self._is_closed = self.cycle[0] == portstub
-
-
 class PortStub(object):
     def __init__(self, category: str, name: str, portdir: Optional[LocalPath] = None) -> None:
         self.category = category
@@ -312,7 +297,7 @@ class Port(PortStub):
     @property
     def version(self) -> str:
         assert self.portversion is not None or self.distversion is not None
-        return self.distversion if self.distversion is not None else self.portversion  # type: str
+        return self.distversion if self.distversion is not None else self.portversion
 
     @staticmethod
     def _gen_footer(makefile: StringIO) -> None:
