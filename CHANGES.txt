@@ -4,6 +4,7 @@
  - feature: add ability to create ports
  - feature: implement pkg-descr generation
  - fix: fix cyclical dependencies
+ - fix: setting categories (that changes the category)
 
 0.1.6 (18-Dec-17):
  - switch to python 3

@@ -228,8 +228,8 @@ def main() -> None:
         cran.categories = categories
         cran.maintainer = Platform.address
         try:
-            Ports.get_port_by_name(name)
-            print("err: CRAN port %s already exists at %s" % (args.name, cran.origin))
+            port = Ports.get_port_by_name(name)
+            print("err: CRAN port %s already exists at %s" % (args.name, port.origin))
             exit(ERR_EXISTS)
         except PortError:
             pass
