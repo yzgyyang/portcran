@@ -255,7 +255,7 @@ class PortStub(object):
     def portdir(self) -> LocalPath:
         if self._portdir is None:
             from ports.core.ports import Ports
-            return Ports.dir / self.origin
+            return Ports.dir / self.category / self.name
         return self._portdir
 
     @property
