@@ -1,7 +1,7 @@
 from re import compile as re_compile
 from tarfile import TarFile
 from traceback import print_exc
-from typing import Callable, Dict, List, Optional, Union, cast
+from typing import Callable, Dict, Optional, Union, cast
 from plumbum.path import LocalPath
 from ports.core import Port, PortDepends, PortError, PortStub, Ports
 from ports.cran.uses import Cran
@@ -143,10 +143,11 @@ class CranPort(Port):
 
     def __init__(self, category: str, name: str, portdir: LocalPath, distfile: Optional[TarFile] = None) -> None:
         super().__init__(category, Cran.PKGNAMEPREFIX + name, portdir)
-        self.distname = "${PORTNAME}_${DISTVERSION}"
         self.portname = name
-        self.uses[Cran].add("auto-plist")
         if distfile is not None:
+            self.distname = "${PORTNAME}_${DISTVERSION}"
+            self.uses[Cran].add("auto-plist")
+            self.website = "https://CRAN.R-project.org/package=%s" % self.portname
             self._load_descr(distfile)
             self._load_changelog(distfile)
 
@@ -197,7 +198,7 @@ class CranPort(Port):
     @_parse.keyword("Description")  # type: ignore
     def _parse(self, value: str) -> None:
         # pylint: disable=function-redefined
-        pass
+        self.description = value
 
     @_parse.keyword("License")  # type: ignore
     def _parse(self, value: str) -> None:
@@ -205,15 +206,15 @@ class CranPort(Port):
         licenses = [l.strip() for l in value.split("|")]
         if len(licenses) > 1:
             self.license.combination = "dual"
-        for license in licenses:
-            if license == "GPL (>= 2)":
+        for descr in licenses:
+            if descr == "GPL (>= 2)":
                 self.license.add("GPLv2+")
-            elif license == "GPL-2":
+            elif descr == "GPL-2":
                 self.license.add("GPLv2")
-            elif license == "GPL-3":
+            elif descr == "GPL-3":
                 self.license.add("GPLv3")
             else:
-                raise PortError("CRAN: unknown 'License' value '%s'" % license)
+                raise PortError("CRAN: unknown 'License' value '%s'" % descr)
 
     @_parse.keyword("NeedsCompilation")  # type: ignore
     def _parse(self, value: str) -> None:
@@ -242,7 +243,7 @@ class CranPort(Port):
     @_parse.keyword("URL")  # type: ignore
     def _parse(self, value: str) -> None:
         # pylint: disable=function-redefined
-        pass
+        self.website = value
 
     @_parse.keyword("Version")  # type: ignore
     def _parse(self, value: str) -> None:
@@ -296,11 +297,12 @@ class CranPort(Port):
     @staticmethod
     def create(name: str, distfile: LocalPath, portdir: Optional[str] = None) -> "CranPort":
         categories = ["math"]
+        port = None
         try:
             port = Ports.get_port_by_name(Cran.PKGNAMEPREFIX + name)
             categories = port.categories
         except PortError:
-            port = None
+            pass
         if portdir is not None:
             portdir = LocalPath(portdir)
         cran = CranPort(categories[0], name, portdir, TarFile.open(str(distfile), "r:gz"))
