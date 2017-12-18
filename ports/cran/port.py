@@ -12,19 +12,20 @@ from ports.core.port import PortDepends
 __all__ = ["CranPort"]
 
 IGNORED_KEYS = [
-    "Date",
+    "Author",
     "Authors@R",
     "ByteCompile",
-    "LazyLoad",
+    "Date",
+    "Date/Publication",
     "LazyData",
-    "Author",
+    "LazyLoad",
     "Maintainer",
+    "Note",
+    "Packaged",
     "Repository",
+    "Repository/R-Forge/DateTimeStamp",
     "Repository/R-Forge/Project",
     "Repository/R-Forge/Revision",
-    "Repository/R-Forge/DateTimeStamp",
-    "Date/Publication",
-    "Packaged",
 ]
 
 INTERNAL_PACKAGES = [
