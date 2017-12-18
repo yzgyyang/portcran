@@ -80,6 +80,8 @@ class PortVarList(PortValue[List[str]]):
     def __get__(self, instance: "Port", owner: type) -> List[str]:
         value = instance.uses.get_variable(self.name)
         if value is None:
+            if not instance.has_value(self):
+                self.__set__(instance, [])
             value = cast(List[str], instance.get_value(self))
         assert isinstance(value, list)
         return value
@@ -284,14 +286,31 @@ class Port(PortStub):
     no_arch = PortVar(6, 1, "NO_ARCH")
 
     def __init__(self, category: str, name: str, portdir: Optional[LocalPath]) -> None:
-        super().__init__(category, name, portdir)
         self._values: Dict[PortValue, Union[str, List[str], PortObject]] = {}
         self.categories = [category]
+        super().__init__(category, name, portdir)
         self.changelog: Dict[str, List[str]] = {}
         self.maintainer = Platform.address
         self.portname = name
         self.description: Optional[str] = None
         self.website: Optional[str] = None
+
+    @property
+    def category(self) -> str:
+        return self.categories[0]
+
+    @category.setter
+    def category(self, value: str) -> None:
+        categories = self.categories
+        if value in categories:
+            categories.remove(value)
+        self.categories = [value] + categories
+
+    @categories.setter
+    def categories(self, categories: List[str]) -> List[str]:
+        if not categories:
+            raise PortError("Port: invalid categories, must start with: %s" % self.category)
+        return categories
 
     @property
     def descr(self) -> LocalPath:
@@ -383,12 +402,6 @@ class Port(PortStub):
 
     def _gen_plist(self) -> None:
         raise NotImplementedError("Generic Port does not know how to create pkg-plist")
-
-    @categories.setter
-    def categories(self, categories: List[str]) -> List[str]:
-        if not categories or categories[0] != self.category:
-            raise PortError("Port: invalid categories, must start with: %s" % self.category)
-        return categories
 
     def generate(self) -> None:
         makefile = StringIO()
