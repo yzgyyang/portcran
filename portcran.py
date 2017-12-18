@@ -60,16 +60,20 @@ def diff(left: Iterable[str], right: Iterable[str]) -> Tuple[List[str], bool, Li
     return old, left == right, new
 
 
+def yies(obj: list) -> str:
+    return "ies" if len(obj) > 1 else "y"
+
+
 def log_depends(log: TextIO, depend: str, difference: Tuple[List[str], bool, List[str]]) -> None:
     old, common, new = difference
     if not common:
         log.write(" - order %s dependencies lexicographically on origin\n" % depend)
     if old:
-        log.write(" - remove unused %s dependencies:\n" % depend)
+        log.write(" - remove unused %s dependenc%s:\n" % (depend, yies(old)))
         for i in sorted(old):
             log.write("   - %s\n" % i)
     if new:
-        log.write(" - add new %s dependencies:\n" % depend)
+        log.write(" - add new %s dependenc%s:\n" % (depend, yies(new)))
         for i in sorted(new):
             log.write("   - %s\n" % i)
 
