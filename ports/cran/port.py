@@ -1,4 +1,4 @@
-from re import compile as recompile, match
+from re import compile as re_compile, match
 from tarfile import TarFile
 from traceback import print_exc
 from typing import Callable, Dict, Optional, Union, cast
@@ -70,8 +70,22 @@ DAY3 = r"(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)"
 MONTH3 = r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)"
 
 DATE = r"(?:\d{4}-\d{2}-\d{2}|" + \
-    r"{day3} {month3} \d{two} \d{two}:\d{two}:\d{two} \w{three} \d{four})".format(day3=DAY3, month3=MONTH3,
-                                                                                  two="{2}", three="{3}", four="{4}")
+    r"{day3} {month3}".format(day3=DAY3, month3=MONTH3) + \
+    r"\d{2} \d{2}:\d{2}:\d{2} \w{3} \d{4})"
+
+EMPTY_LINE = re_compile(r"^\* (?:R|man|src)/[^:]*:$")
+
+VERSION_IDENTIFIER = [
+    re_compile(r"^\* DESCRIPTION(?: \(Version\))?: (?:New version is|Version) (.+)\.$"),
+    re_compile(r"^Changes to Version (.+)$"),
+]
+
+LINE = ("* ", "( ", "o ")
+
+SECTION = [
+    re_compile(r"^{date},? .* <.*>$".format(date=DATE)),
+    re_compile(r"^\d{4}-\d{2}-\d{2}  .+$")
+]
 
 
 def extractfile(tar_file: TarFile, name: str, filtr: Callable[[str], str], line: int = 1) -> Optional[Stream]:
@@ -82,24 +96,39 @@ def extractfile(tar_file: TarFile, name: str, filtr: Callable[[str], str], line:
     return None if stream is None else Stream((line.decode('utf-8') for line in stream.readlines()), filtr, line)
 
 
+def version_identifier(line: str) -> Optional[str]:
+    for regex in VERSION_IDENTIFIER:
+        match = regex.match(line)
+        if match:
+            return match.group(1)
+
+
+def section(line: str) -> bool:
+    for regex in SECTION:
+        match = regex.match(line)
+        if match:
+            return True
+    return False
+
+
 class CranPort(Port):
     class Keywords(object):
         def __init__(self) -> None:
             self._keywords: Dict[str, Callable[[CranPort, str], None]] = {}
 
-        def __get__(self, instance: CranPort, owner: type) -> Union[CranPort.Keywords, Callable[[str, str, int], None]]:
+        def __get__(self, instance: "CranPort", owner: type) -> Union["CranPort.Keywords", Callable[[str, str, int], None]]:
             if instance is None:
                 return self
             return lambda key, value, line: self.parse(instance, key, value, line)
 
-        def keyword(self, *keywords: str) -> Callable[[Callable[[CranPort, str], None]], CranPort.Keywords]:
-            def assign(func: Callable[[CranPort, str], None]) -> CranPort.Keywords:
+        def keyword(self, *keywords: str) -> Callable[[Callable[["CranPort", str], None]], "CranPort.Keywords"]:
+            def assign(func: Callable[["CranPort", str], None]) -> "CranPort.Keywords":
                 for keyword in keywords:
                     self._keywords[keyword] = func
                 return self
             return assign
 
-        def parse(self, port: CranPort, key: str, value: str, line: int) -> None:
+        def parse(self, port: "CranPort", key: str, value: str, line: int) -> None:
             if key in self._keywords:
                 self._keywords[key](port, value)
             elif key not in IGNORED_KEYS:
@@ -108,7 +137,7 @@ class CranPort(Port):
     _parse = Keywords()
 
     def __init__(self, category: str, name: str, portdir: LocalPath, distfile: Optional[TarFile] = None) -> None:
-        super(CranPort, self).__init__(category, Cran.PKGNAMEPREFIX + name, portdir)
+        super().__init__(category, Cran.PKGNAMEPREFIX + name, portdir)
         self.distname = "${PORTNAME}_${DISTVERSION}"
         self.portname = name
         self.uses[Cran].add("auto-plist")
@@ -134,7 +163,7 @@ class CranPort(Port):
 
     @staticmethod
     @Ports.factory
-    def _create(port: PortStub) -> Optional[CranPort]:
+    def _create(port: PortStub) -> Optional["CranPort"]:
         if port.name.startswith(Cran.PKGNAMEPREFIX):
             portname = port.name[len(Cran.PKGNAMEPREFIX):]
             port = CranPort(port.category, portname, port.portdir)
@@ -210,25 +239,25 @@ class CranPort(Port):
         self.distversion = value
 
     def _load_changelog(self, distfile: TarFile) -> None:
-        changelog = extractfile(distfile, "%s/ChangeLog" % self.portname, lambda x: x.strip(), line=0)
-        if changelog is None:
+        for name in ("ChangeLog", "NEWS"):
+            changelog = extractfile(distfile, "%s/%s" % (self.portname, name), lambda x: x.strip(), line=0)
+            if changelog is not None:
+                break
+        else:
             return
         version = self.distversion
         assert version is not None
-        empty_line = recompile(r"^\* (?:R|man|src)/[^:]*:$")
-        version_identifier = recompile(r"^\* DESCRIPTION(?: \(Version\))?: (?:New version is|Version) (.*)\.$")
-        section = recompile(r"^{date},? .* <.*>$".format(date=DATE))
         prev_line = ""
         while True:
-            for line in changelog.take_while(lambda l: not version_identifier.match(l)):
-                if line == "" or section.match(line) is not None:
+            for line in changelog.take_while(lambda l: not version_identifier(l)):
+                if line == "" or section(line):
                     prev_line = ""
                     continue
                 if line is not None:
                     if version not in self.changelog:
                         self.changelog[version] = []
-                    if line[:2] in ("* ", "( "):
-                        if empty_line.match(line) is None:
+                    if line[:2] in LINE:
+                        if EMPTY_LINE.match(line) is None:
                             prev_line = ""
                             self.changelog[version].append(line[2:])
                         else:
@@ -239,9 +268,8 @@ class CranPort(Port):
                         self.changelog[version][-1] += prev_line + " " + line
                         prev_line = ""
             try:
-                version = version_identifier.search(next(changelog)).group(1)
+                version = version_identifier(next(changelog))
                 prev_line = ""
-                assert version not in self.changelog
             except StopIteration:
                 break
 
@@ -249,15 +277,14 @@ class CranPort(Port):
         desc = extractfile(distfile, "%s/DESCRIPTION" % self.portname, lambda x: x.rstrip('\n'))
         if desc is None:
             raise NameError("CRAN '%s' package missing DESCRIPTION file")
-        identifier = recompile(r"^[a-zA-Z/@]+:")
-        while desc.has_current:
-            key, value = desc.current.split(":", 1)
-            next(desc)
+        identifier = re_compile(r"^[a-zA-Z/@]+:")
+        for line in desc:
+            key, value = line.split(":", 1)
             value = value.strip() + "".join(" " + i.strip() for i in desc.take_while(lambda l: not identifier.match(l)))
             self._parse(key, value, desc.line)  # type: ignore
 
     @staticmethod
-    def create(name: str, distfile: LocalPath, portdir: Optional[str] = None) -> CranPort:
+    def create(name: str, distfile: LocalPath, portdir: Optional[str] = None) -> "CranPort":
         categories = ["math"]
         maintainer = "ports@FreeBSD.org"
         try:
