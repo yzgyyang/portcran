@@ -27,7 +27,7 @@ class PortValue(Orderable, Generic[T], metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def generate(self, value: Union[str, List[str], PortObject]) -> Iterable[Tuple[str, Iterable[str]]]:
+    def generate(self, value: Union[str, List[str], "PortObject"]) -> Iterable[Tuple[str, Iterable[str]]]:
         raise NotImplementedError()
 
     def key(self) -> Tuple[int, int]:
@@ -59,7 +59,7 @@ class PortVar(PortValue[Optional[str]]):
     def __set__(self, obj: "Port", value: str) -> None:
         obj.set_value(self, value)
 
-    def generate(self, value: Union[str, List[str], PortObject]) -> Iterable[Tuple[str, Iterable[str]]]:
+    def generate(self, value: Union[str, List[str], "PortObject"]) -> Iterable[Tuple[str, Iterable[str]]]:
         assert isinstance(value, str)
         return (self.name, (value,)),
 
@@ -86,7 +86,7 @@ class PortVarList(PortValue[List[str]]):
     def __set__(self, obj: "Port", value: List[str]) -> None:
         obj.set_value(self, self._setter(obj, value))
 
-    def generate(self, value: Union[str, List[str], PortObject]) -> Iterable[Tuple[str, Iterable[str]]]:
+    def generate(self, value: Union[str, List[str], "PortObject"]) -> Iterable[Tuple[str, Iterable[str]]]:
         assert isinstance(value, list)
         return (self.name, value),
 
@@ -94,7 +94,7 @@ class PortVarList(PortValue[List[str]]):
         if self.name in variables:
             self.__set__(obj, variables.pop(self.name))
 
-    def setter(self, setter: Callable[[Port, List[str]], List[str]]) -> "PortVarList":
+    def setter(self, setter: Callable[["Port", List[str]], List[str]]) -> "PortVarList":
         self._setter = setter
         return self
 
@@ -117,7 +117,7 @@ class PortObj(PortValue[T2]):
         super().__init__(section)
         self.factory = factory
 
-    def __get__(self, instance: Port, owner: type) -> T2:
+    def __get__(self, instance: "Port", owner: type) -> T2:
         if not instance.has_value(self):
             instance.set_value(self, self.factory())
         return cast(T2, instance.get_value(self))
@@ -126,7 +126,7 @@ class PortObj(PortValue[T2]):
         # pylint: disable=no-self-use
         return cast(T2, value).generate()
 
-    def load(self, obj: Port, variables: MakeDict) -> None:
+    def load(self, obj: "Port", variables: MakeDict) -> None:
         self.__get__(obj, Port).load(variables)
 
 
@@ -162,9 +162,8 @@ class PortLicense(PortObject, Iterable[str]):
 class PortDepends(PortObject):
     # pylint: disable=too-few-public-methods
     class Collection(object):
-        def __init__(self, name: str, delayed_load: bool) -> None:
+        def __init__(self, name: str) -> None:
             self.name = name
-            self.delayed_load = delayed_load
             self._depends: List[Dependency] = []
 
         def __iter__(self) -> Iterator[Dependency]:
@@ -182,10 +181,10 @@ class PortDepends(PortObject):
         self.build = self._make_depends("BUILD_DEPENDS")
         self.lib = self._make_depends("LIB_DEPENDS")
         self.run = self._make_depends("RUN_DEPENDS")
-        self.test = self._make_depends("TEST_DEPENDS", delayed_load=True)
+        self.test = self._make_depends("TEST_DEPENDS")
 
-    def _make_depends(self, name: str, delayed_load: bool = False) -> PortDepends.Collection:
-        depends = PortDepends.Collection(name, delayed_load)
+    def _make_depends(self, name: str,) -> "PortDepends.Collection":
+        depends = PortDepends.Collection(name)
         self._depends.append(depends)
         return depends
 
@@ -194,9 +193,8 @@ class PortDepends(PortObject):
 
     def load(self, variables: MakeDict) -> None:
         for depends in self._depends:
-            if not depends.delayed_load:
-                for depend in variables.pop(depends.name, default=[]):
-                    depends.add(Dependency.create(depend))
+            for depend in variables.pop(depends.name, default=[]):
+                depends.add(Dependency.create(depend))
 
 
 class PortUses(PortObject):

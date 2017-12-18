@@ -7,7 +7,7 @@ __all__ = ["LibDependency", "LocalBaseDependency", "PortDependency"]
 
 class LibDependency(Dependency):
     def __init__(self, libname: str, origin: str) -> None:
-        super(LibDependency, self).__init__(origin)
+        super().__init__(origin)
         self.libname = libname
 
     def __str__(self) -> str:
@@ -15,7 +15,7 @@ class LibDependency(Dependency):
 
     @staticmethod
     @Dependency.factory
-    def _create(target: str, origin: str) -> Optional[LibDependency]:
+    def _create(target: str, origin: str) -> Optional["LibDependency"]:
         condition = match(r"lib(.*).so", target)
         if condition is not None:
             return LibDependency(condition.group(1), origin)
@@ -24,7 +24,7 @@ class LibDependency(Dependency):
 
 class LocalBaseDependency(Dependency):
     def __init__(self, path: str, origin: str) -> None:
-        super(LocalBaseDependency, self).__init__(origin)
+        super().__init__(origin)
         self.path = path
 
     def __str__(self) -> str:
@@ -32,7 +32,7 @@ class LocalBaseDependency(Dependency):
 
     @staticmethod
     @Dependency.factory
-    def _create(target: str, origin: str) -> Optional[LocalBaseDependency]:
+    def _create(target: str, origin: str) -> Optional["LocalBaseDependency"]:
         condition = match(r"\${LOCALBASE}/(.*)", target)
         if condition is not None:
             return LocalBaseDependency(condition.group(1), origin)
@@ -41,7 +41,7 @@ class LocalBaseDependency(Dependency):
 
 class PortDependency(Dependency):
     def __init__(self, port: Port, condition: str = ">0") -> None:
-        super(PortDependency, self).__init__(port.origin)
+        super().__init__(port.origin)
         self.port = port
         self.condition = condition
 
@@ -50,7 +50,7 @@ class PortDependency(Dependency):
 
     @staticmethod
     @Dependency.factory
-    def _create(target: str, origin: str) -> Optional[PortDependency]:
+    def _create(target: str, origin: str) -> Optional["PortDependency"]:
         condition = match(r"(.*)((?:>=|>).*)", target)
         if condition is not None:
             port = Ports.get_port_by_origin(origin)

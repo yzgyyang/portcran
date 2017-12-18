@@ -25,7 +25,7 @@ class Dependency(Orderable, metaclass=ABCMeta):
         raise NotImplementedError()
 
     @staticmethod
-    def create(expression: str) -> Dependency:
+    def create(expression: str) -> "Dependency":
         target, origin = expression.split(":")
         dependency = [i for i in (j(target, origin) for j in Dependency._factories) if i is not None]
         if not dependency:
@@ -34,7 +34,7 @@ class Dependency(Orderable, metaclass=ABCMeta):
         return dependency[0]
 
     @staticmethod
-    def factory(factory: Callable[[str, str], Optional[Dependency]]) -> Callable[[str, str], Optional[Dependency]]:
+    def factory(factory: Callable[[str, str], Optional["Dependency"]]) -> Callable[[str, str], Optional["Dependency"]]:
         Dependency._factories.append(factory)
         return factory
 
