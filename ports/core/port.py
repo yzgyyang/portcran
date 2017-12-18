@@ -294,6 +294,10 @@ class Port(PortStub):
         self.website: Optional[str] = None
 
     @property
+    def descr(self) -> LocalPath:
+        return self.portdir / "pkg-descr"
+
+    @property
     def pkgname(self) -> str:
         return "%s%s" % (self.pkgnameprefix or "", self.portname)
 
@@ -353,12 +357,11 @@ class Port(PortStub):
         make["-C", self.portdir, "makesum"]()
 
     def _gen_descr(self) -> None:
-        pkg_descr = self.portdir / "pkg-descr"
         if self.description is None:
-            if pkg_descr.exists():
-                pkg_descr.remove()
+            if self.descr.exists():
+                self.descr.remove()
         else:
-            with pkg_descr.open("w") as descr:
+            with self.descr.open("w") as descr:
                 width = 0
                 for word in self.description.split():
                     next_line = word[-1] == "\n"
@@ -412,6 +415,15 @@ class Port(PortStub):
             # TODO: remove once all R-cran ports have been verified
             print("Unloaded variables for %s:" % self.name, variables)
         assert variables.all_popped
+        if self.descr.exists():
+            with self.descr.open() as descr:
+                lines = descr.readlines()
+                if lines[-1].startswith("WWW"):
+                    self.website = lines[-1].split()[1]
+                    lines.pop()
+                    if lines[-1] == "\n":
+                        lines.pop()
+                self.description = " ".join(l.strip() for l in lines)
 
     def del_value(self, port_value: PortValue) -> None:
         if port_value in self._values:
