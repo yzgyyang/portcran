@@ -17,9 +17,11 @@ def make_vars(portdir: LocalPath) -> "MakeDict":
     variables = MakeDict()
     with open(portdir / "Makefile", "r") as makefile:
         data = Stream(makefile.readlines(), lambda x: x.split("#", 2)[0].rstrip())
-        while data.has_current:
-            line = " ".join(i.rstrip("\\") for i in data.take_while(lambda x: x.endswith("\\"), inclusive=True))
-            var = VARIABLE_ASSIGNMENT.search(line)
+        while True:
+            lines = list(data.take_while(lambda x: x.endswith("\\"), inclusive=True))
+            if len(lines) == 0:
+                break
+            var = VARIABLE_ASSIGNMENT.search(" ".join(line.rstrip("\\") for line in lines))
             if var is not None:
                 name = var.group(1)
                 modifier = var.group(2)
@@ -31,7 +33,6 @@ def make_vars(portdir: LocalPath) -> "MakeDict":
                 else:
                     assert not modifier
                     variables.set(name, values)
-
     return variables
 
 
@@ -137,14 +138,6 @@ class Stream(Iterator[str]):
             return self._filter(self._objects[self.line - 1])
         else:
             raise StopIteration
-
-    @property
-    def current(self) -> str:
-        return self._filter(self._objects[self.line - 1])
-
-    @property
-    def has_current(self) -> bool:
-        return self.line != -1
 
     def take_while(self, condition: Callable[[str], bool], inclusive: bool = False) -> Iterator[str]:
         for value in self:
