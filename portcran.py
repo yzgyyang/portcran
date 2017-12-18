@@ -128,14 +128,14 @@ def generate_update_log(old: CranPort, new: CranPort) -> None:
             new_depends = getattr(new.depends, depend)
             log_depends(log, depend, diff([i.origin for i in old_depends], sorted(i.origin for i in new_depends)))
 
-        assert new.distversion is not None
-        if new.distversion in new.changelog:
+        if new.version in new.changelog:
             port = make_cran_port(old.portname, version=old.version)
-            if old.distversion in port.changelog and port.changelog[old.distversion] == new.changelog[new.distversion]:
+            assert port.version == old.version
+            if port.version in port.changelog and port.changelog[port.version] == new.changelog[new.version]:
                 log.write(" - changelog not updated\n")
             else:
                 log.write(" - changelog:\n")
-                for line in new.changelog[new.distversion]:
+                for line in new.changelog[new.version]:
                     log.write("   -")
                     length = 4
                     for word in line.split(" "):
