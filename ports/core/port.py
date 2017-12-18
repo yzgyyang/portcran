@@ -290,6 +290,8 @@ class Port(PortStub):
         self.changelog: Dict[str, List[str]] = {}
         self.maintainer = Platform.address
         self.portname = name
+        self.description: Optional[str] = None
+        self.website: Optional[str] = None
 
     @property
     def pkgname(self) -> str:
@@ -347,6 +349,35 @@ class Port(PortStub):
                         width += len(i)
                 makefile.write("\n")
 
+    def _gen_distinfo(self) -> None:
+        make["-C", self.portdir, "makesum"]()
+
+    def _gen_descr(self) -> None:
+        pkg_descr = self.portdir / "pkg-descr"
+        if self.description is None:
+            if pkg_descr.exists():
+                pkg_descr.remove()
+        else:
+            with pkg_descr.open("w") as descr:
+                width = 0
+                for word in self.description.split():
+                    next_line = word[-1] == "\n"
+                    word = word.rstrip("\n")
+                    if width == -1 or width + len(word) + 1 > 79:
+                        descr.write("\n")
+                        width = 0
+                    elif width:
+                        descr.write(" ")
+                        width += 1
+                    descr.write(word)
+                    if next_line:
+                        width = -1
+                    else:
+                        width += len(word)
+                descr.write("\n")
+                if self.website is not None:
+                    descr.write("\nWWW: %s\n" % self.website)
+
     def _gen_plist(self) -> None:
         raise NotImplementedError("Generic Port does not know how to create pkg-plist")
 
@@ -363,7 +394,8 @@ class Port(PortStub):
         self._gen_footer(makefile)
         with open(self.portdir / "Makefile", "w") as portmakefile:
             portmakefile.write(makefile.getvalue())
-        make["-C", self.portdir, "makesum"]()
+        self._gen_distinfo()
+        self._gen_descr()
         self._gen_plist()
 
     def load(self) -> None:
