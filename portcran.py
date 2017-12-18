@@ -38,13 +38,14 @@ class Command(object):
         return decorator
 
 
-def make_cran_port(name: str, portdir: Optional[str] = None) -> CranPort:
-    print("Checking for latest version...")
-    site_page = urlopen("http://cran.r-project.org/package=%s" % name).read().decode("utf-8")
-    version = search(r"<td>Version:</td>\s*<td>(.*?)</td>", str(site_page)).group(1)
+def make_cran_port(name: str, portdir: Optional[str] = None, version: Optional[str] = None) -> CranPort:
+    if not version:
+        print("Checking for latest version...")
+        site_page = urlopen("http://cran.r-project.org/package=%s" % name).read().decode("utf-8")
+        version = search(r"<td>Version:</td>\s*<td>(.*?)</td>", str(site_page)).group(1)
     distfile = Ports.distdir / ("%s_%s.tar.gz" % (name, version))
     if not distfile.exists():  # pylint: disable=no-member
-        print("Fetching package source...")
+        print("Fetching package source (%s-%s)..." % (name, version))
         urlretrieve("https://cran.r-project.org/src/contrib/%s" % distfile.name, distfile)  # pylint: disable=no-member
     return CranPort.create(name, distfile, portdir)
 
@@ -127,19 +128,23 @@ def generate_update_log(old: CranPort, new: CranPort) -> None:
             new_depends = getattr(new.depends, depend)
             log_depends(log, depend, diff([i.origin for i in old_depends], sorted(i.origin for i in new_depends)))
 
+        assert new.distversion is not None
         if new.distversion in new.changelog:
-            assert new.distversion is not None
-            log.write(" - changelog:\n")
-            for line in new.changelog[new.distversion]:
-                log.write("   -")
-                length = 4
-                for word in line.split(" "):
-                    length += len(word) + 1
-                    if length > 75:
-                        log.write("\n    ")
-                        length = 5 + len(word)
-                    log.write(" " + word)
-                log.write("\n")
+            port = make_cran_port(old.portname, version=old.version)
+            if old.distversion in port.changelog and port.changelog[old.distversion] == new.changelog[new.distversion]:
+                log.write(" - changelog not updated\n")
+            else:
+                log.write(" - changelog:\n")
+                for line in new.changelog[new.distversion]:
+                    log.write("   -")
+                    length = 4
+                    for word in line.split(" "):
+                        length += len(word) + 1
+                        if length > 75:
+                            log.write("\n    ")
+                            length = 5 + len(word)
+                        log.write(" " + word)
+                    log.write("\n")
         else:
             log.write(" - no changelog provided\n")
 
