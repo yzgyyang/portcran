@@ -202,12 +202,18 @@ class CranPort(Port):
     @_parse.keyword("License")  # type: ignore
     def _parse(self, value: str) -> None:
         # pylint: disable=function-redefined
-        if value == "GPL (>= 2)":
-            self.license.add("GPLv2+")
-        elif value == "GPL-2":
-            self.license.add("GPLv2")
-        else:
-            raise PortError("CRAN: unknown 'License' value '%s'" % value)
+        licenses = [l.strip() for l in value.split("|")]
+        if len(licenses) > 1:
+            self.license.combination = "dual"
+        for license in licenses:
+            if license == "GPL (>= 2)":
+                self.license.add("GPLv2+")
+            elif license == "GPL-2":
+                self.license.add("GPLv2")
+            elif license == "GPL-3":
+                self.license.add("GPLv3")
+            else:
+                raise PortError("CRAN: unknown 'License' value '%s'" % license)
 
     @_parse.keyword("NeedsCompilation")  # type: ignore
     def _parse(self, value: str) -> None:
@@ -288,23 +294,17 @@ class CranPort(Port):
             self._parse(key, value, desc.line)  # type: ignore
 
     @staticmethod
-    def create(
-            name: str,
-            distfile: LocalPath,
-            portdir: Optional[str] = None,
-            categories: Optional[List[str]] = None) -> "CranPort":
-        if categories is None:
-            categories = ["math"]
-        maintainer = "ports@FreeBSD.org"
+    def create(name: str, distfile: LocalPath, portdir: Optional[str] = None) -> "CranPort":
+        categories = ["math"]
         try:
             port = Ports.get_port_by_name(Cran.PKGNAMEPREFIX + name)
             categories = port.categories
-            maintainer = cast(str, port.maintainer)
         except PortError:
-            pass
+            port = None
         if portdir is not None:
             portdir = LocalPath(portdir)
         cran = CranPort(categories[0], name, portdir, TarFile.open(str(distfile), "r:gz"))
-        cran.maintainer = maintainer
         cran.categories = categories
+        if port is not None:
+            cran.maintainer = cast(str, port.maintainer)
         return cran
