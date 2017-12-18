@@ -12,7 +12,7 @@ from ports.core.port import PortLicense
 __author__ = "David Naylor <dbn@FreeBSD.org>"
 __license__ = "BSD (FreeBSD)"
 __summary__ = "Generates FreeBSD Ports from CRAN packages"
-__version__ = "0.1.5"
+__version__ = "0.1.6"
 
 
 class Command(object):

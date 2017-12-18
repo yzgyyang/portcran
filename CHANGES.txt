@@ -1,8 +1,11 @@
 0.x.y (dd-MMM-yy):
+
+0.1.6 (18-Dec-17):
  - switch to python 3
  - feature: add LocalBaseDependency for '${LOCALBASE}/path/to/file:origin'
  - refactor: add support for multiple sub-commands
  - fix: do not set NO_ARCH
+ - fix: dected unchanged changelog
 
 0.1.5 (04-Apr-17):
  - feature: update code to be mypy-0.501 compatiable
