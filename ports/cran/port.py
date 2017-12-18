@@ -1,7 +1,7 @@
 from re import compile as re_compile
 from tarfile import TarFile
 from traceback import print_exc
-from typing import Callable, Dict, Optional, Union, cast
+from typing import Callable, Dict, List, Optional, Union, cast
 from plumbum.path import LocalPath
 from ports.core import Port, PortDepends, PortError, PortStub, Ports
 from ports.cran.uses import Cran
@@ -160,7 +160,7 @@ class CranPort(Port):
                     port = Ports.get_port_by_name(Cran.PKGNAMEPREFIX + name)
                 except PortError:
                     if not optional:
-                        raise
+                        raise PortError("CRAN: Required package does not exist: %s" % name)
                     print("Suggested package does not exist: %s" % name)
                 else:
                     condition = ">0" if not depend.group(2) else depend.group(2).replace("-", ".").replace(" ", "")
@@ -288,8 +288,13 @@ class CranPort(Port):
             self._parse(key, value, desc.line)  # type: ignore
 
     @staticmethod
-    def create(name: str, distfile: LocalPath, portdir: Optional[str] = None) -> "CranPort":
-        categories = ["math"]
+    def create(
+            name: str,
+            distfile: LocalPath,
+            portdir: Optional[str] = None,
+            categories: Optional[List[str]] = None) -> "CranPort":
+        if categories is None:
+            categories = ["math"]
         maintainer = "ports@FreeBSD.org"
         try:
             port = Ports.get_port_by_name(Cran.PKGNAMEPREFIX + name)
