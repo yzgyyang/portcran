@@ -309,6 +309,11 @@ class Port(PortStub):
     def pkgname(self) -> str:
         return "%s%s" % (self.pkgnameprefix or "", self.portname)
 
+    @property
+    def version(self) -> str:
+        assert self.portversion is not None or self.distversion is not None
+        return self.distversion if self.distversion is not None else self.portversion  # type: str
+
     @staticmethod
     def _gen_footer(makefile: StringIO) -> None:
         makefile.write("\n.include <bsd.port.mk>\n")
