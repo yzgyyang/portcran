@@ -1,6 +1,6 @@
 from re import match
 from typing import Optional
-from ports import Dependency, Port, Ports
+from ports import Dependency
 
 __all__ = ["LibDependency", "LocalBaseDependency", "PortDependency"]
 
@@ -40,20 +40,18 @@ class LocalBaseDependency(Dependency):
 
 
 class PortDependency(Dependency):
-    def __init__(self, port: Port, condition: str = ">0") -> None:
-        super().__init__(port.origin)
-        self.port = port
+    def __init__(self, pkgname: str, condition: str, origin: str) -> None:
+        super().__init__(origin)
+        self.pkgname = pkgname
         self.condition = condition
 
     def __str__(self) -> str:
-        return "%s%s:%s" % (self.port.pkgname, self.condition, self.origin)
+        return "%s%s:%s" % (self.pkgname, self.condition, self.origin)
 
     @staticmethod
     @Dependency.factory
     def _create(target: str, origin: str) -> Optional["PortDependency"]:
         condition = match(r"(.*)((?:>=|>).*)", target)
         if condition is not None:
-            port = Ports.get_port_by_origin(origin)
-            assert condition.group(1) == port.pkgname
-            return PortDependency(port, condition.group(2))
+            return PortDependency(condition.group(1), condition.group(2), origin)
         return None

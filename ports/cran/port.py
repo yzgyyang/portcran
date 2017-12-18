@@ -17,6 +17,8 @@ IGNORED_KEYS = [
     "ByteCompile",
     "Date",
     "Date/Publication",
+    "Encoding",
+    "ImportsNote",
     "LazyData",
     "LazyLoad",
     "Maintainer",
@@ -160,7 +162,7 @@ class CranPort(Port):
                     print("Suggested package does not exist: %s" % name)
                 else:
                     condition = ">0" if not depend.group(2) else depend.group(2).replace("-", ".").replace(" ", "")
-                    depends.add(PortDependency(port, condition))
+                    depends.add(PortDependency(port.pkgname, condition, port.origin))
 
     @staticmethod
     @Ports.factory
