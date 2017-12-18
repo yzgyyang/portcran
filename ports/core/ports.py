@@ -63,7 +63,6 @@ class Ports(object):
 
     @staticmethod
     def get_port_by_origin(origin: str) -> Port:
-        print(origin)
         return Ports._get_port(lambda i: i.origin == origin)
 
     @staticmethod
