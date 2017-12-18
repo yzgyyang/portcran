@@ -1,6 +1,6 @@
 from re import match
 from typing import Optional
-from ports import Dependency
+from ports.core import Dependency
 
 __all__ = ["LibDependency", "LocalBaseDependency", "PortDependency"]
 

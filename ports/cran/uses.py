@@ -1,5 +1,5 @@
 from typing import List, Optional
-from ports import Uses
+from ports.core import Uses
 
 __all__ = ["Cran"]
 

@@ -1,6 +1,7 @@
 from abc import ABCMeta
 from typing import Callable, ClassVar, Dict, Iterable, List, Optional, Set, Tuple
-from ports.core.internal import MakeDict, Orderable
+from ports.core.make import MakeDict
+from ports.utilities import Orderable
 
 __all__ = ["Uses"]
 

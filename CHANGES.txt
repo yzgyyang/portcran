@@ -1,4 +1,5 @@
 0.x.y (dd-MMM-yy):
+ - fix: fix cyclical dependencies
 
 0.1.6 (18-Dec-17):
  - switch to python 3

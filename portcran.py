@@ -4,9 +4,8 @@ from re import search
 from sys import argv
 from typing import Callable, Iterable, List, Optional, TextIO, Tuple
 from urllib.request import urlopen, urlretrieve
-from ports import Platform, PortError, Ports
+from ports import Platform, PortError, PortLicense, Ports
 from ports.cran import Cran, CranPort
-from ports.core.port import PortLicense
 
 
 __author__ = "David Naylor <dbn@FreeBSD.org>"
@@ -133,6 +132,7 @@ def generate_update_log(old: CranPort, new: CranPort) -> None:
             log_depends(log, depend, diff([i.origin for i in old_depends], sorted(i.origin for i in new_depends)))
 
         if new.version in new.changelog:
+            assert old.portname is not None
             port = make_cran_port(old.portname, version=old.version)
             assert port.version == old.version
             if port.version in port.changelog and port.changelog[port.version] == new.changelog[new.version]:

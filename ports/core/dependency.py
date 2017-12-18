@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from typing import Callable, ClassVar, List, Optional
-from ports.core.internal import Orderable
+from ports.utilities import Orderable
 
 __all__ = ["Dependency"]
 

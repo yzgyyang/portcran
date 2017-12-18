@@ -1,13 +1,12 @@
-from re import compile as re_compile, match
+from re import compile as re_compile
 from tarfile import TarFile
 from traceback import print_exc
 from typing import Callable, Dict, Optional, Union, cast
 from plumbum.path import LocalPath
-from ports import Port, PortError, PortStub, Ports
-from ports.core.internal import Stream
+from ports.core import Port, PortDepends, PortError, PortStub, Ports
 from ports.cran.uses import Cran
 from ports.dependency import PortDependency
-from ports.core.port import PortDepends
+from ports.utilities import Stream
 
 __all__ = ["CranPort"]
 
@@ -90,6 +89,8 @@ SECTION = [
     re_compile(r"^\d{4}-\d{2}-\d{2}  .+$")
 ]
 
+DEPENDENCY = re_compile(r"(\w+)(?:\s*\((.*)\))?")
+
 
 def extractfile(tar_file: TarFile, name: str, filtr: Callable[[str], str], line: int = 1) -> Optional[Stream]:
     try:
@@ -104,6 +105,7 @@ def version_identifier(line: str) -> Optional[str]:
         match = regex.match(line)
         if match:
             return match.group(1)
+    return None
 
 
 def section(line: str) -> bool:
@@ -151,7 +153,7 @@ class CranPort(Port):
     @staticmethod
     def _add_dependency(depends: PortDepends.Collection, value: str, optional: bool = False) -> None:
         for cran in (i.strip() for i in value.split(",")):
-            depend = match(r"(\w+)(?:\s*\((.*)\))?", cran)
+            depend = DEPENDENCY.match(cran)
             name = depend.group(1).strip()
             if name not in INTERNAL_PACKAGES:
                 try:
@@ -248,8 +250,7 @@ class CranPort(Port):
                 break
         else:
             return
-        version = self.distversion
-        assert version is not None
+        version = self.version
         prev_line = ""
         while True:
             for line in changelog.take_while(lambda l: not version_identifier(l)):
@@ -271,7 +272,7 @@ class CranPort(Port):
                         self.changelog[version][-1] += prev_line + " " + line
                         prev_line = ""
             try:
-                version = version_identifier(next(changelog))
+                version = cast(str, version_identifier(next(changelog)))
                 prev_line = ""
             except StopIteration:
                 break

@@ -2,7 +2,7 @@ from os import environ
 from typing import Callable, ClassVar, List, Optional
 from plumbum.cmd import make
 from plumbum.path import LocalPath
-from ports.core.internal import make_var
+from ports.core.make import make_var
 from ports.core.port import Port, PortError, PortStub
 
 __all__ = ["Ports"]

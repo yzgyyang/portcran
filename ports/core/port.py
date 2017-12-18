@@ -6,11 +6,12 @@ from typing import Callable, Dict, Generic, Iterable, Iterator, List, Optional, 
 from plumbum.cmd import make
 from plumbum.path import LocalPath
 from ports.core.dependency import Dependency
-from ports.core.internal import MakeDict, Orderable, make_vars
+from ports.core.make import MakeDict, make_vars
 from ports.core.platform import Platform
 from ports.core.uses import Uses
+from ports.utilities import Orderable
 
-__all__ = ["Port", "PortError", "PortStub"]
+__all__ = ["Port", "PortDepends", "PortError", "PortLicense", "PortStub"]
 
 
 T = TypeVar("T", covariant=True)
@@ -296,8 +297,10 @@ class Port(PortStub):
 
     @property
     def version(self) -> str:
-        assert self.portversion is not None or self.distversion is not None
-        return self.distversion if self.distversion is not None else self.portversion
+        if self.distversion is not None:
+            return self.distversion
+        assert self.portversion is not None
+        return self.portversion
 
     @staticmethod
     def _gen_footer(makefile: StringIO) -> None:

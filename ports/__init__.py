@@ -1,4 +1,3 @@
-from ports.core import Dependency, Platform, Port, PortError, PortStub, Ports, Uses  # pylint: disable=import-self
-from ports import dependency, uses
+from ports.core import Platform, PortError, PortLicense, Ports
 
-__all__ = ["Dependency", "Platform", "Port", "PortError", "PortStub", "Ports", "Uses"]
+__all__ = ["Platform", "PortError", "PortLicense", "Ports"]

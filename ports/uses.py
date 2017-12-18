@@ -1,6 +1,5 @@
 from typing import Dict, Iterable, List, Tuple
-from ports import Uses
-from ports.core.internal import MakeDict
+from ports.core import MakeDict, Uses
 
 __all__ = ["PkgConfig", "ShebangFix"]
 
