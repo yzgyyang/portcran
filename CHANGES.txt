@@ -1,4 +1,8 @@
 0.x.y (dd-MMM-yy):
+
+0.1.7 (18-Dec-17):
+ - feature: add ability to create ports
+ - feature: implement pkg-descr generation
  - fix: fix cyclical dependencies
 
 0.1.6 (18-Dec-17):

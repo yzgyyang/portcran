@@ -137,6 +137,11 @@ def generate_update_log(old: CranPort, new: CranPort) -> None:
             new_depends = getattr(new.depends, depend)
             log_depends(log, depend, diff([i.origin for i in old_depends], sorted(i.origin for i in new_depends)))
 
+        if old.description != new.description:
+            log.write(" - update description to align with CRAN package\n")
+        if old.website != new.website:
+            log.write(" - update website URL to align with CRAN package\n")
+
         if new.version in new.changelog:
             assert old.portname is not None
             port = make_cran_port(old.portname, version=old.version)
