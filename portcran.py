@@ -115,7 +115,7 @@ def log_license(log: TextIO, old: PortLicense, new: PortLicense) -> None:
 
 def generate_update_log(old: CranPort, new: CranPort) -> None:
     assert (old.portversion or old.distversion) != new.distversion
-    with open(new.portdir / "commit.svn", "w") as log:
+    with open(new.portdir / "commit.svn", "w", encoding="utf-8") as log:
         log.write("%s: updated to version %s\n\n" % (new.origin, new.distversion))
         if old.portrevision is not None:
             log.write(" - removed PORTREVISION due to version bump\n")
