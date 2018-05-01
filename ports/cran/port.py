@@ -72,9 +72,12 @@ DAY3 = r"(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)"
 
 MONTH3 = r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)"
 
-DATE = r"(?:\d{4}-\d{2}-\d{2}|" + \
-    r"{day3} {month3}".format(day3=DAY3, month3=MONTH3) + \
-    r"\d{2} \d{2}:\d{2}:\d{2} \w{3} \d{4})"
+DATE = (
+    "(?:" +
+        r"\d{4}-\d{2}-\d{2}" +
+        "|{day3} {month3} ".format(day3=DAY3, month3=MONTH3) +
+            r"\d{2} \d{2}:\d{2}:\d{2} \w{3} \d{4}" +
+    ")")
 
 EMPTY_LINE = re_compile(r"^\* (?:R|man|src)/[^:]*:$")
 

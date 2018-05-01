@@ -1,4 +1,5 @@
 0.x.y (dd-MMM-yy):
+ - fix: chanelog date detection for long date form
 
 0.1.7 (18-Dec-17):
  - feature: add ability to create ports
