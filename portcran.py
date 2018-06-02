@@ -12,7 +12,7 @@ from ports.cran import Cran, CranPort
 __author__ = "David Naylor <dbn@FreeBSD.org>"
 __license__ = "BSD (FreeBSD)"
 __summary__ = "Generates FreeBSD Ports from CRAN packages"
-__version__ = "0.1.7"
+__version__ = "0.1.8"
 
 
 ERR_GENERAL = 1

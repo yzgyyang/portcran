@@ -1,4 +1,4 @@
-0.x.y (dd-MMM-yy):
+0.1.8 (02-Jun-18):
  - fix: chanelog date detection for long date form
  - fix: do not emit "Created By" line for new ports
 
