@@ -17,6 +17,13 @@ __all__ = ["Port", "PortDepends", "PortError", "PortLicense", "PortStub"]
 T = TypeVar("T", covariant=True)
 
 
+def peek(file: StringIO, length: int) -> str:
+    pos = file.tell()
+    value = file.read(length)
+    file.seek(pos)
+    return value
+
+
 class PortValue(Orderable, Generic[T], metaclass=ABCMeta):
     def __init__(self, section: int, order: int = 1) -> None:
         super().__init__()
@@ -333,14 +340,17 @@ class Port(PortStub):
 
     def _gen_header(self, makefile: StringIO) -> None:
         port_makefile = self.portdir / "Makefile"
+        metadata = []  # type: List[str]
         if port_makefile.exists():
             with open(port_makefile, "rU") as port_makefile:
-                created_by = port_makefile.readline()
-                keyword = port_makefile.readline()
+                for line in iter(lambda: port_makefile.readline(), ""):
+                    if line.startswith("# Created by") or line.startswith("# $FreeBSD"):
+                        metadata.append(line)
+                    if peek(port_makefile, 1) != "#":
+                        break
         else:
-            created_by = "# Created by: %s <%s>\n" % (Platform.full_name, Platform.address)
-            keyword = "# $FreeBSD$\n"
-        makefile.writelines((created_by, keyword))
+            metadata.append("# $FreeBSD$\n")
+        makefile.writelines(metadata)
 
     def _gen_sections(self, makefile: StringIO) -> None:
         for _, items in groupby(sorted(list(self._values.items()), key=lambda k: k[0]), lambda k: k[0].section):
