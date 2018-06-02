@@ -1,6 +1,6 @@
 from collections import OrderedDict
 from re import compile as re_compile
-from typing import List, Optional, Set, Union
+from typing import Dict, List, Optional, Set, Union
 from plumbum.path import LocalPath
 from ports.utilities import Stream
 
@@ -38,7 +38,7 @@ def make_vars(portdir: LocalPath) -> "MakeDict":
 
 class MakeDict(object):
     def __init__(self) -> None:
-        self._variables: OrderedDict[str, List[str]] = OrderedDict()
+        self._variables: Dict[str, List[str]] = OrderedDict()
         self._internal: Set[str] = set()
 
     def __contains__(self, item: str) -> bool:

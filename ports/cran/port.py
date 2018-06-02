@@ -73,11 +73,11 @@ DAY3 = r"(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)"
 MONTH3 = r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)"
 
 DATE = (
-    "(?:" +
+    r"(?:" + (
         r"\d{4}-\d{2}-\d{2}" +
-        "|{day3} {month3} ".format(day3=DAY3, month3=MONTH3) +
-            r"\d{2} \d{2}:\d{2}:\d{2} \w{3} \d{4}" +
-    ")")
+        r"|{day3} {month3} ".format(day3=DAY3, month3=MONTH3) +
+        r"\d{2} \d{2}:\d{2}:\d{2} \w{3} \d{4}") +
+    r")")
 
 EMPTY_LINE = re_compile(r"^\* (?:R|man|src)/[^:]*:$")
 
@@ -94,6 +94,8 @@ SECTION = [
 ]
 
 DEPENDENCY = re_compile(r"(\w+)(?:\s*\((.*)\))?")
+
+PARSE_SIGNATURE = Callable[[str, str, int], None]
 
 
 def extractfile(tar_file: TarFile, name: str, filtr: Callable[[str], str], line: int = 1) -> Optional[Stream]:
@@ -125,7 +127,7 @@ class CranPort(Port):
         def __init__(self) -> None:
             self._keywords: Dict[str, Callable[[CranPort, str], None]] = {}
 
-        def __get__(self, instance: "CranPort", owner: type) -> Union["CranPort.Keywords", Callable[[str, str, int], None]]:
+        def __get__(self, instance: "CranPort", owner: type) -> Union["CranPort.Keywords", PARSE_SIGNATURE]:
             if instance is None:
                 return self
             return lambda key, value, line: self.parse(instance, key, value, line)
@@ -247,7 +249,7 @@ class CranPort(Port):
     @_parse.keyword("URL")  # type: ignore
     def _parse(self, value: str) -> None:
         # pylint: disable=function-redefined
-        self.website = value
+        self.website = [u.rstrip(",") for u in value.split()][0]
 
     @_parse.keyword("Version")  # type: ignore
     def _parse(self, value: str) -> None:

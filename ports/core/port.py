@@ -302,12 +302,12 @@ class Port(PortStub):
         self.description: Optional[str] = None
         self.website: Optional[str] = None
 
-    @property
-    def category(self) -> str:
+    @property  # type: ignore
+    def category(self) -> str:  # type: ignore
         return self.categories[0]
 
     @category.setter
-    def category(self, value: str) -> None:
+    def category(self, value: str) -> None:  # type: ignore
         categories = self.categories
         if value in categories:
             categories.remove(value)
@@ -340,10 +340,10 @@ class Port(PortStub):
 
     def _gen_header(self, makefile: StringIO) -> None:
         port_makefile = self.portdir / "Makefile"
-        metadata = []  # type: List[str]
+        metadata: List[str] = []
         if port_makefile.exists():
             with open(port_makefile, "rU") as port_makefile:
-                for line in iter(lambda: port_makefile.readline(), ""):
+                for line in iter(port_makefile.readline, ""):
                     if line.startswith("# Created by") or line.startswith("# $FreeBSD"):
                         metadata.append(line)
                     if peek(port_makefile, 1) != "#":
