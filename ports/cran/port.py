@@ -162,6 +162,8 @@ class CranPort(Port):
 
     @staticmethod
     def _add_dependency(depends: PortDepends.Collection, value: str, optional: bool = False) -> None:
+        missing = []
+        suggested = []
         for cran in (i.strip() for i in value.split(",")):
             depend = DEPENDENCY.match(cran)
             name = depend.group(1).strip()
@@ -170,11 +172,16 @@ class CranPort(Port):
                     port = Ports.get_port_by_name(Cran.PKGNAMEPREFIX + name)
                 except PortError:
                     if not optional:
-                        raise PortError("CRAN: Required package does not exist: %s" % name)
-                    print("Suggested package does not exist: %s" % name)
+                        missing.append(name)
+                    else:
+                        suggested.append(name)
                 else:
                     condition = ">0" if not depend.group(2) else depend.group(2).replace("-", ".").replace(" ", "")
                     depends.add(PortDependency(port.pkgname, condition, port.origin))
+        if suggested:
+            print("Suggested package(s) does not exist: %s" % ", ".join(suggested))
+        if missing:
+            raise PortError("CRAN: Required package(s) does not exist: %s" % ", ".join(missing))
 
     @staticmethod
     @Ports.factory
