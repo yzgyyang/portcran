@@ -302,10 +302,16 @@ class CranPort(Port):
         if desc is None:
             raise NameError("CRAN '%s' package missing DESCRIPTION file")
         identifier = re_compile(r"^[a-zA-Z/@]+:")
+        errors = []
         for line in desc:
-            key, value = line.split(":", 1)
-            value = value.strip() + "".join(" " + i.strip() for i in desc.take_while(lambda l: not identifier.match(l)))
-            self._parse(key, value, desc.line)  # type: ignore
+            try:
+                key, value = line.split(":", 1)
+                value = value.strip() + "".join(" " + i.strip() for i in desc.take_while(lambda l: not identifier.match(l)))
+                self._parse(key, value, desc.line)  # type: ignore
+            except PortError as e:
+                errors.append(e)
+        if errors:
+            raise PortError("\n".join(e.args[0] for e in errors))
 
     @staticmethod
     def create(name: str, distfile: LocalPath, portdir: Optional[str] = None) -> "CranPort":
