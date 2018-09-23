@@ -13,6 +13,7 @@ __all__ = ["CranPort"]
 IGNORED_KEYS = [
     "author",
     "authors@r",
+    "bugreports",
     "bytecompile",
     "date",
     "date/publication",
@@ -28,6 +29,8 @@ IGNORED_KEYS = [
     "repository/r-forge/project",
     "repository/r-forge/revision",
     "revision",
+    "roxygennote",
+    "type",
 ]
 
 INTERNAL_PACKAGES = [
@@ -255,6 +258,10 @@ class CranPort(Port):
     def _parse(self, value: str) -> None:
         # pylint: disable=function-redefined
         self.distversion = value
+
+    @_parse.keyword("VignetteBuilder")
+    def _parse(self, value: str):
+        self._add_dependency(self.depends.build, value)
 
     def _load_changelog(self, distfile: TarFile) -> None:
         for name in ("ChangeLog", "NEWS"):
