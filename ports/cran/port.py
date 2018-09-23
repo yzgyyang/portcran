@@ -96,7 +96,7 @@ SECTION = [
     re_compile(r"^\d{4}-\d{2}-\d{2}  .+$")
 ]
 
-DEPENDENCY = re_compile(r"(\w+)(?:\s*\((.*)\))?")
+DEPENDENCY = re_compile(r"([\w.]+)(?:\s*\((.*)\))?")
 
 PARSE_SIGNATURE = Callable[[str, str, int], None]
 
