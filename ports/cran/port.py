@@ -21,6 +21,7 @@ IGNORED_KEYS = [
     "importsnote",
     "lazydata",
     "lazyload",
+    "linkingto",
     "maintainer",
     "note",
     "packaged",
@@ -30,6 +31,7 @@ IGNORED_KEYS = [
     "repository/r-forge/revision",
     "revision",
     "roxygennote",
+    "systemrequirements",
     "type",
 ]
 
@@ -64,6 +66,13 @@ INTERNAL_PACKAGES = [
     "tools",
     "utils",
 ]
+
+LICENSES = {
+    "CC0": "CC0-1.0",
+    "GPL (>= 2)": "GPLv2+",
+    "GPL-2": "GPLv2",
+    "GPL-3": "GPLv3",
+}
 
 EMPTY_LOG = [
     "",
@@ -223,12 +232,8 @@ class CranPort(Port):
         if len(licenses) > 1:
             self.license.combination = "dual"
         for descr in licenses:
-            if descr == "GPL (>= 2)":
-                self.license.add("GPLv2+")
-            elif descr == "GPL-2":
-                self.license.add("GPLv2")
-            elif descr == "GPL-3":
-                self.license.add("GPLv3")
+            if descr in LICENSES:
+                self.license.add(LICENSES[descr])
             else:
                 raise PortError("CRAN: unknown 'License' value '%s'" % descr)
 
