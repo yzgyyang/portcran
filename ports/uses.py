@@ -1,7 +1,7 @@
 from typing import Dict, Iterable, List, Tuple
 from ports.core import MakeDict, Uses
 
-__all__ = ["PkgConfig", "ShebangFix"]
+__all__ = ["Gnome", "PkgConfig", "ShebangFix"]
 
 
 def create_uses(name: str) -> type:
@@ -12,6 +12,20 @@ def create_uses(name: str) -> type:
     return UsesClass
 
 PkgConfig = create_uses("pkgconfig")
+
+
+@Uses.register("gnome")
+class Gnome(Uses):
+    def __init__(self) -> None:
+        super(Gnome, self).__init__("gnome")
+        self.components: List[str] = []
+
+    def generate(self) -> Iterable[Tuple[str, Iterable[str]]]:
+        if self.components:
+            yield ("USE_GNOME", self.components)
+
+    def load(self, variables: MakeDict) -> None:
+        self.components = variables.pop("USE_GNOME", default=[])
 
 
 @Uses.register("shebangfix")
