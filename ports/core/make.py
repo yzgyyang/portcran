@@ -30,6 +30,9 @@ def make_vars(portdir: LocalPath) -> "MakeDict":
                     variables.extend(name, values)
                 elif modifier == "?":
                     variables.add(name, values)
+                elif modifier == ":":
+                    variables.add(name, values)
+                    variables.set(name, variables[name])
                 else:
                     assert not modifier
                     variables.set(name, values)
@@ -61,7 +64,7 @@ class MakeDict(object):
 
     def __str__(self) -> str:
         unpopped = []
-        for key, value in list(self._variables.items()):
+        for key, value in self._variables.items():
             if key not in self._internal:
                 unpopped.append("%s=%s" % (key, value))
         return ", ".join(unpopped)
@@ -85,14 +88,15 @@ class MakeDict(object):
             return kwargs["default"]
         values = self[name]
         del self._variables[name]
+        if name in self._internal:
+            self._internal.remove(name)
         return values
 
     def pop_value(self, name: str, **kwargs: Optional[Union[str, bool]]) -> Optional[str]:
         if "default" in kwargs and name not in self:
             assert kwargs["default"] is None or isinstance(kwargs["default"], str)
             return kwargs["default"]
-        values = self[name]
-        del self._variables[name]
+        values = self.pop(name)
         if "combine" in kwargs and kwargs["combine"] is True:
             assert isinstance(kwargs["combine"], bool)
             value = " ".join(values)
