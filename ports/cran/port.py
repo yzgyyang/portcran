@@ -15,6 +15,7 @@ IGNORED_KEYS = [
     "authors@r",
     "bugreports",
     "bytecompile",
+    "collate",
     "date",
     "date/publication",
     "encoding",
@@ -72,6 +73,7 @@ LICENSES = {
     "GPL (>= 2)": "GPLv2+",
     "GPL-2": "GPLv2",
     "GPL-3": "GPLv3",
+    "MIT": "MIT",
 }
 
 EMPTY_LOG = [
@@ -232,6 +234,9 @@ class CranPort(Port):
         if len(licenses) > 1:
             self.license.combination = "dual"
         for descr in licenses:
+            if descr.endswith(" + file LICENSE"):
+                self.license.file = "${WRKSRC}/LICENSE"
+                descr = descr[:-len(" + file LICENSE")]
             if descr in LICENSES:
                 self.license.add(LICENSES[descr])
             else:
