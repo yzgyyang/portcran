@@ -1,3 +1,10 @@
+0.1.9 (unreleased):
+ - feature: add CC0, MIT and LICENSE file support
+ - feature: add partial USES=gnome support
+ - fix: add more keywords to the ignore list
+ - fix: support ':=' assignment
+ - fix: remove unused '--user' option from 'create' action
+
 0.1.8 (02-Jun-18):
  - fix: chanelog date detection for long date form
  - fix: do not emit "Created By" line for new ports

@@ -8,7 +8,7 @@ if sys.version_info < (3, 6):
 
 setup(
     name="portcran",
-    version="0.1.8",
+    version="0.1.9",
     author="David Naylor",
     author_email="dbn@FreeBSD.org",
     packages=["ports.core", "ports", "ports.cran"],
