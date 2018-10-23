@@ -213,8 +213,6 @@ def main() -> None:
     def create(args: Namespace) -> None:
         if args.address is not None:
             Platform.address = args.address
-        if args.user is not None:
-            Platform.full_name = args.user
         categories = args.categories.split(",")
         for category in categories:
             if category not in Ports.categories:
@@ -241,7 +239,6 @@ def main() -> None:
     create.add_argument("-a", "--address", help="creator's email address")
     create.add_argument("-c", "--categories", default="math", help="comma separated list of the CRAN port's categories")
     create.add_argument("-p", "--portsdir", help="output ports directory")
-    create.add_argument("-u", "--user", help="the name of the user")
 
     command.execute(argv[1:])
 

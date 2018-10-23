@@ -11,8 +11,6 @@ class Platform(object):
 
     address = "%s@%s" % (_passwd.pw_name, gethostname())
 
-    full_name = _passwd.pw_gecos
-
     page_width = 80
 
     tab_width = 8
