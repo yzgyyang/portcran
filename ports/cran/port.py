@@ -1,3 +1,4 @@
+from itertools import chain
 from re import compile as re_compile
 from tarfile import TarFile
 from traceback import print_exc
@@ -325,8 +326,8 @@ class CranPort(Port):
         for line in desc:
             try:
                 key, value = line.split(":", 1)
-                value = value.strip() + "".join(" " + i.strip() for i in desc.take_while(lambda l: not identifier.match(l)))
-                self._parse(key, value, desc.line)  # type: ignore
+                lines = [value.strip()] + [i.strip() for i in desc.take_while(lambda l: not identifier.match(l))]
+                self._parse(key, " ".join(i for i in lines if i), desc.line)  # type: ignore
             except PortError as e:
                 errors.append(e)
         if errors:
