@@ -1,4 +1,4 @@
-0.1.9 (unreleased):
+0.1.9 (24-Oct-18):
  - feature: add CC0, MIT and LICENSE file support
  - feature: add partial USES=gnome support
  - fix: add more keywords to the ignore list
