@@ -98,6 +98,8 @@ EMPTY_LINE = re_compile(r"^\* (?:R|man|src)/[^:]*:$")
 VERSION_IDENTIFIER = [
     re_compile(r"^\* DESCRIPTION(?: \(Version\))?: (?:New version is|Version) (.+)\.$"),
     re_compile(r"^Changes to Version (.+)$"),
+    re_compile(r"^Initial Version (.+)$"),
+    re_compile(r"^Version (.+)$"),
 ]
 
 LINE = ("* ", "( ", "o ")
