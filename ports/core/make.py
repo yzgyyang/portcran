@@ -1,6 +1,6 @@
 from collections import OrderedDict
 from re import compile as re_compile
-from typing import Dict, List, Optional, Set, Union
+from typing import Dict, Iterable, List, Optional, Set, Union
 from plumbum.path import LocalPath
 from ports.utilities import Stream
 
@@ -76,6 +76,10 @@ class MakeDict(object):
     @property
     def all_popped(self) -> bool:
         return len(self._internal) == len(self._variables)
+
+    @property
+    def variables(self) -> Iterable[str]:
+        return [var for var in self._variables.keys() if var not in self._internal]
 
     def extend(self, name: str, values: List[str]) -> None:
         if name in self._variables:

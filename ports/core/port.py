@@ -11,7 +11,7 @@ from ports.core.platform import Platform
 from ports.core.uses import Uses
 from ports.utilities import Orderable
 
-__all__ = ["Port", "PortDepends", "PortError", "PortLicense", "PortStub"]
+__all__ = ["Port", "PortError", "PortStub"]
 
 
 T = TypeVar("T", covariant=True)
@@ -207,6 +207,72 @@ class PortDepends(PortObject):
                 depends.add(Dependency.create(depend))
 
 
+class PortBroken(PortObject):
+    class Category(object):
+        def __init__(self, arch: str = None, opsys: str = None, osrel: str = None) -> None:
+            self.arch = arch
+            self.opsys = opsys
+            self.osrel = osrel
+
+        def __eq__(self, other: object) -> bool:
+            if isinstance(other, PortBroken.Category):
+                return self.arch == other.arch and self.opsys == other.opsys and self.osrel == other.osrel
+            return False
+
+        def __hash__(self) -> int:
+            return hash(str(self))
+
+        def __str__(self) -> str:
+            subcat: List[str] = []
+            if self.opsys is not None:
+                subcat.append(self.opsys)
+                if self.osrel is not None:
+                    subcat.append(self.osrel)
+                    if self.arch is not None:
+                        subcat.append(self.arch)
+            elif self.arch is not None:
+                subcat.append(self.arch)
+            if subcat:
+                return "BROKEN_" + "_".join(subcat)
+            else:
+                return "BROKEN"
+
+        @staticmethod
+        def create(makevar: str) -> "PortBroken.Category":
+            subcat = makevar.split("_")[1:]
+            arch = None
+            opsys = None
+            osrel = None
+            if len(subcat) > 1:
+                opsys = subcat[0]
+                osrel = subcat[1]
+                if len(subcat) == 3:
+                    arch = subcat[2]
+            elif len(subcat) == 1:
+                if subcat[0] == "FreeBSD":
+                    opsys = subcat[0]
+                else:
+                    arch = subcat[0]
+            return PortBroken.Category(arch, opsys, osrel)
+
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.reasons: Dict[PortBroken.Category, str] = {}
+
+    def generate(self) -> Iterable[Tuple[str, Iterable[str]]]:
+        broken: Dict[str, str] = {}
+        for category, reason in self.reasons.items():
+            broken[str(category)] = reason
+        for category in sorted(broken.keys()):
+            yield (category, (broken[category],))
+
+    def load(self, variables: MakeDict) -> None:
+        for variable in variables.variables:
+            if variable.startswith("BROKEN"):
+                self.reasons[PortBroken.Category.create(variable)] = " ".join(variables.pop(variable))
+
+
 class PortUses(PortObject):
     def __init__(self) -> None:
         super().__init__()
@@ -288,9 +354,11 @@ class Port(PortStub):
 
     depends = PortObj(4, PortDepends)
 
-    uses = PortObj(5, PortUses)
+    broken = PortObj(5, PortBroken)
 
-    no_arch = PortVar(6, 1, "NO_ARCH")
+    uses = PortObj(6, PortUses)
+
+    no_arch = PortVar(7, 1, "NO_ARCH")
 
     def __init__(self, category: str, name: str, portdir: Optional[LocalPath]) -> None:
         self._values: Dict[PortValue, Union[str, List[str], PortObject]] = {}
