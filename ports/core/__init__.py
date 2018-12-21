@@ -1,3 +1,4 @@
+"""Core architecture representing the FreeBSD Ports Collection."""
 from ports.core.dependency import Dependency
 from ports.core.make import MakeDict
 from ports.core.platform import Platform

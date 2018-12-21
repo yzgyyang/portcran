@@ -1,4 +1,4 @@
-"""The FreeBSD Ports Collection module.
+"""FreeBSD Ports Collection module.
 
 This module provides an interface to interact with the FreeBSD Ports Collection, and means of discovering ports
 therein.
