@@ -34,12 +34,13 @@ class PortValue(Orderable, Generic[T], metaclass=ABCMeta):
     def __get__(self, instance: "Port", owner: type) -> T:
         raise NotImplementedError()
 
+    @property
+    def _key(self) -> Tuple[int, int]:
+        return self.section, self.order
+
     @abstractmethod
     def generate(self, value: Union[str, List[str], "PortObject"]) -> Iterable[Tuple[str, Iterable[str]]]:
         raise NotImplementedError()
-
-    def key(self) -> Tuple[int, int]:
-        return self.section, self.order
 
     @abstractmethod
     def load(self, obj: "Port", variables: MakeDict) -> None:
@@ -254,7 +255,6 @@ class PortBroken(PortObject):
                 else:
                     arch = subcat[0]
             return PortBroken.Category(arch, opsys, osrel)
-
 
     def __init__(self) -> None:
         super().__init__()

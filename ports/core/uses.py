@@ -22,6 +22,10 @@ class Uses(Orderable, metaclass=ABCMeta):
     def __str__(self) -> str:
         return self.name + (":" + ",".join(sorted(self._args)) if self._args else "")
 
+    @property
+    def _key(self) -> str:
+        return self.name
+
     @staticmethod
     def get(name: str) -> type:
         return Uses._uses[name]
@@ -43,9 +47,6 @@ class Uses(Orderable, metaclass=ABCMeta):
 
     def get_variable(self, name: str) -> Optional[List[str]]:
         pass
-
-    def key(self) -> str:
-        return self.name
 
     def load(self, variables: MakeDict) -> None:
         pass

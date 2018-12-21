@@ -20,6 +20,10 @@ class Dependency(Orderable, metaclass=ABCMeta):
         """Return a string representation of this dependency instance."""
         raise NotImplementedError()
 
+    @property
+    def _key(self) -> str:
+        return self.origin
+
     @staticmethod
     def create(expression: str) -> "Dependency":
         """Create an instance of a Dependency object based on the string representation."""
@@ -40,6 +44,3 @@ class Dependency(Orderable, metaclass=ABCMeta):
         """
         Dependency._factories.append(factory)
         return factory
-
-    def key(self) -> str:
-        return self.origin

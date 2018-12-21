@@ -1,4 +1,4 @@
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta, abstractproperty
 from typing import Any, Callable, Iterable, Iterator
 
 __all__ = ["Orderable", "Stream"]
@@ -8,21 +8,21 @@ class Orderable(object, metaclass=ABCMeta):
     # pylint: disable=too-few-public-methods
     def __eq__(self, other: object) -> bool:
         assert isinstance(other, Orderable)
-        return bool(self.key() == other.key())
+        return bool(self._key() == other._key)
 
     def __hash__(self) -> int:
-        return hash(self.key())
+        return hash(self._key)
 
     def __lt__(self, other: object) -> bool:
         assert isinstance(other, Orderable)
-        return bool(self.key() < other.key())
+        return bool(self._key() < other._key)
 
     def __ne__(self, other: object) -> bool:
         """Determines if this object is not equal to the specified object."""
         return not self == other
 
-    @abstractmethod
-    def key(self) -> Any:
+    @abstractproperty
+    def _key(self) -> Any:
         raise NotImplementedError()
 
 
