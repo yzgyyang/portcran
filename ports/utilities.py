@@ -17,6 +17,10 @@ class Orderable(object, metaclass=ABCMeta):
         assert isinstance(other, Orderable)
         return bool(self.key() < other.key())
 
+    def __ne__(self, other: object) -> bool:
+        """Determines if this object is not equal to the specified object."""
+        return not self == other
+
     @abstractmethod
     def key(self) -> Any:
         raise NotImplementedError()
