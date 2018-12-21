@@ -3,11 +3,11 @@ from io import StringIO
 from itertools import groupby
 from math import ceil, floor
 from typing import Callable, Dict, Generic, Iterable, Iterator, List, Optional, Set, Tuple, TypeVar, Union, cast
-from plumbum.cmd import make
 from plumbum.path import LocalPath
 from ports.core.dependency import Dependency
 from ports.core.make import MakeDict, make_vars
 from ports.core.platform import Platform
+from ports.core.ports import MAKE
 from ports.core.uses import Uses
 from ports.utilities import Orderable
 
@@ -451,7 +451,7 @@ class Port(PortStub):
                 makefile.write("\n")
 
     def _gen_distinfo(self) -> None:
-        make["-C", self.portdir, "makesum"]()
+        MAKE("-C", self.portdir, "makesum")
 
     def _gen_descr(self) -> None:
         if self.description is None:

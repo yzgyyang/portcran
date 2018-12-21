@@ -1,10 +1,10 @@
-.eric6project
-.idea
-.mypy_cache
+**/*.py[co]
 *.e4p
 *.orig
+.eric6project
+.vscode/
+.idea
+.mypy_cache
 MANIFEST
 build/
 dist/
-**/*.py[co]
-
