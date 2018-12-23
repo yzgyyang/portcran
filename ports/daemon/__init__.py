@@ -5,9 +5,12 @@ from .config import Config
 
 __all__ = ['create_app', 'db']
 
-db = SQLAlchemy(app)  # pylint: disable=C0103
+
+db = SQLAlchemy()  # pylint: disable=C0103
+
 
 def create_app():
+    """Create a WebAPI Flask Application for portd."""
     app = Flask(__name__)
     app.config.from_object(Config)
     db.init_app(app)
