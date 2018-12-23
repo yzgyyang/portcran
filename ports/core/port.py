@@ -1,20 +1,21 @@
+"""Classes describing a FreeBSD Port and the various structures."""
 from abc import ABCMeta, abstractmethod
 from io import StringIO
 from itertools import groupby
 from math import ceil, floor
 from typing import Callable, Dict, Generic, Iterable, Iterator, List, Optional, Set, Tuple, TypeVar, Union, cast
 from plumbum.path import LocalPath
-from ports.core.dependency import Dependency
-from ports.core.make import MakeDict, make_vars
-from ports.core.platform import Platform
-from ports.core.ports import MAKE
-from ports.core.uses import Uses
-from ports.utilities import Orderable
+from .dependency import Dependency
+from .make import MakeDict, make_vars
+from .platform import Platform
+from .ports import MAKE
+from .uses import Uses
+from ..utilities import Orderable
 
 __all__ = ["Port", "PortError", "PortStub"]
 
 
-T = TypeVar("T", covariant=True)
+T = TypeVar("T", covariant=True)  # pylint: disable=C0103
 
 
 def peek(file: StringIO, length: int) -> str:
@@ -24,7 +25,7 @@ def peek(file: StringIO, length: int) -> str:
     return value
 
 
-class PortValue(Orderable, Generic[T], metaclass=ABCMeta):
+class PortValue(Orderable, Generic[T], metaclass=ABCMeta):  # pylint: disable=E1136
     def __init__(self, section: int, order: int = 1) -> None:
         super().__init__()
         self.order = order
@@ -47,7 +48,7 @@ class PortValue(Orderable, Generic[T], metaclass=ABCMeta):
         raise NotImplementedError()
 
 
-class PortVar(PortValue[Optional[str]]):
+class PortVar(PortValue[Optional[str]]):  # pylint: disable=E1136
     def __init__(self, section: int, order: int, name: str) -> None:
         super().__init__(section, order)
         self.name = name
@@ -79,7 +80,7 @@ class PortVar(PortValue[Optional[str]]):
             self.__set__(obj, value)
 
 
-class PortVarList(PortValue[List[str]]):
+class PortVarList(PortValue[List[str]]):  # pylint: disable=E1136
     def __init__(self, section: int, order: int, name: str) -> None:
         super().__init__(section, order)
         self._setter: Callable[[Port, List[str]], List[str]] = lambda x, y: y
@@ -110,7 +111,7 @@ class PortVarList(PortValue[List[str]]):
         return self
 
 
-class PortObject(object, metaclass=ABCMeta):
+class PortObject(object, metaclass=ABCMeta):  # pylint: disable=E1136
     @abstractmethod
     def generate(self) -> Iterable[Tuple[str, Iterable[str]]]:
         raise NotImplementedError()
@@ -123,7 +124,7 @@ class PortObject(object, metaclass=ABCMeta):
 T2 = TypeVar("T2", bound=PortObject)
 
 
-class PortObj(PortValue[T2]):
+class PortObj(PortValue[T2]):  # pylint: disable=E1136
     def __init__(self, section: int, factory: Callable[[], T2]) -> None:
         super().__init__(section)
         self.factory = factory
@@ -264,8 +265,8 @@ class PortBroken(PortObject):
         broken: Dict[str, str] = {}
         for category, reason in self.reasons.items():
             broken[str(category)] = reason
-        for category in sorted(broken.keys()):
-            yield (category, (broken[category],))
+        for category_name in sorted(broken.keys()):
+            yield (category_name, (broken[category_name],))
 
     def load(self, variables: MakeDict) -> None:
         for variable in variables.variables:
