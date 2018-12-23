@@ -6,7 +6,7 @@ The following resources are available:
 ## `/ports`
 The list of ports manageable through Portd.  The correctly supported ports are based on:
  - CRAN: Core R Archive Network
- - PIP: Python Independent Packages (???)
+ - PyPI: Python Package Index
 
 Ports from the above sources can be created, updated and removed.  If a port has a missing dependency this can
 also be created.
@@ -17,7 +17,7 @@ A port looks as follows:
     "name": "$PORTNAME",
     "version": "$DISTVERSION",
     "maintainer": "$MAINTAINER",
-    "source": /*one of "cran", "pip"*/,
+    "source": /*one of "cran", "pypi"*/,
     "latest_version": /*latest version available at source*/,
     "origin": /*directory location of port*/,
     "patch": /*URI to patch against this port (if any)*/,
