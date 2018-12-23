@@ -1,6 +1,6 @@
 # Portd WebAPI
 The following resources are available:
- - `/ports`: GET only list of ports manageable through Portd
+ - `/ports`: ports manageable through Portd
  - `/patches`: list of open patches against the FreeBSD Ports Collection
 
 ## `/ports`
@@ -24,8 +24,15 @@ A port looks as follows:
 }
 ```
 
+The properties that can be updated are:
+ - `source`: If set to `latest` then the latest version from the port source will be used.  Otherwise the port will be
+   updated to the specified version.
+ - `maintainer`: The maintainer can either be assinged to `ports@FreeBSD.org` (if not already that user), or to a
+   specified maintainer if the current maintainer is `ports@FreeBSD.org`.
+
 ## `/patches`
-The list of open patches against the FreeBSD Ports Collection.
+The list of open patches against the FreeBSD Ports Collection.  To create a patch perform the relevant action on the
+underlying port.  The patch URI will then appear in the port's `patch` property.
 
 A patch looks as follows:
 ```json
@@ -34,7 +41,7 @@ A patch looks as follows:
     "port": /*URI of the Port this patch is against*/,
     "action": /*one of "create", "update", "remove"*/,
     "log": /*commmit message of the patch*/,
-    "status": /*one of "generate", "lint", "build", "wait", "commit", "reject", "error"*/,
+    "status": /*one of "generate", "lint", "build", "wait", "commit", "error"*/,
     "error": /*if in "status":"error" then a description of the error message*/,
     "diff": /*URI of the actual patch*/,
     "poudriere": {
@@ -48,3 +55,7 @@ A patch looks as follows:
     ]
 }
 ```
+
+The properties than can be updated are:
+ - `log`: change the commit log message.
+ - `status`: if the current status is `wait` then the status can be changed to `commit` if the patch is approved.
