@@ -7,8 +7,8 @@ from os import environ
 from typing import Callable, ClassVar, List, Optional
 from plumbum import local
 from plumbum.path import LocalPath
-from ports.core.make import make_var
-from ports.core.port import Port, PortError, PortStub
+from .make import make_var
+from .port import Port, PortError, PortStub
 
 __all__ = ["Ports", "MAKE"]
 

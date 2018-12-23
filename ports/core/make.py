@@ -2,7 +2,7 @@ from collections import OrderedDict
 from re import compile as re_compile
 from typing import Dict, Iterable, List, Optional, Set, Union
 from plumbum.path import LocalPath
-from ports.utilities import Stream
+from ..utilities import Stream
 
 __all__ = ["MakeDict", "make_var", "make_vars"]
 

@@ -1,13 +1,12 @@
-from itertools import chain
 from re import compile as re_compile
 from tarfile import TarFile
 from traceback import print_exc
 from typing import Callable, Dict, Optional, Union, cast
 from plumbum.path import LocalPath
-from ports.core import Port, PortDepends, PortError, PortStub, Ports
-from ports.cran.uses import Cran
-from ports.dependency import PortDependency
-from ports.utilities import Stream
+from .uses import Cran
+from ..core import Port, PortDepends, PortError, PortStub, Ports
+from ..dependency import PortDependency
+from ..utilities import Stream
 
 __all__ = ["CranPort"]
 
@@ -180,6 +179,7 @@ class CranPort(Port):
         suggested = []
         for cran in (i.strip() for i in value.split(",")):
             depend = DEPENDENCY.match(cran)
+            assert depend is not None
             name = depend.group(1).strip()
             if name not in INTERNAL_PACKAGES:
                 try:
@@ -279,7 +279,7 @@ class CranPort(Port):
         # pylint: disable=function-redefined
         self.distversion = value
 
-    @_parse.keyword("VignetteBuilder")
+    @_parse.keyword("VignetteBuilder")  # type: ignore
     def _parse(self, value: str):
         self._add_dependency(self.depends.build, value)
 
