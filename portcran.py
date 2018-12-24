@@ -43,7 +43,7 @@ class Command(object):
         return decorator
 
 
-def make_cran_port(name: str, portdir: Optional[str] = None, version: Optional[str] = None) -> CranPort:
+def make_cran_port(name: str, portdir: Optional[Path] = None, version: Optional[str] = None) -> CranPort:
     if not version:
         print("Checking for latest version...")
         site_page = urlopen("http://cran.r-project.org/package=%s" % name).read().decode("utf-8")
@@ -205,7 +205,7 @@ def main() -> None:
     def update(args: Namespace) -> None:
         port = Ports.get_port_by_name(Cran.PKGNAMEPREFIX + args.name)
         assert isinstance(port, CranPort)
-        cran = make_cran_port(args.name, args.output)
+        cran = make_cran_port(args.name, portdir=Path(args.output))
         cran.generate()
         generate_update_log(port, cran)
     update.add_argument("name", help="name of the CRAN package")
@@ -224,7 +224,7 @@ def main() -> None:
         category = categories[0]
         name = Cran.PKGNAMEPREFIX + args.name
         portdir = portsdir / category / name
-        cran = make_cran_port(args.name, str(portdir))
+        cran = make_cran_port(args.name, portdir)
         cran.categories = categories
         cran.maintainer = Platform.address
         try:
