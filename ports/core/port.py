@@ -3,8 +3,9 @@ from abc import ABCMeta, abstractmethod
 from io import StringIO
 from itertools import groupby
 from math import ceil, floor
-from typing import Callable, Dict, Generic, Iterable, Iterator, List, Optional, Set, Tuple, TypeVar, Union, cast
-from plumbum.path import LocalPath
+from pathlib import Path
+from typing import (Any, Callable, Dict, Generic, IO, Iterable, Iterator, List, Optional, Set, Tuple, TypeVar, Union,
+                    cast)
 from .dependency import Dependency
 from .make import MakeDict, make_vars
 from .platform import Platform
@@ -18,7 +19,7 @@ __all__ = ["Port", "PortError", "PortStub"]
 T = TypeVar("T", covariant=True)  # pylint: disable=C0103
 
 
-def peek(file: StringIO, length: int) -> str:
+def peek(file: IO[Any], length: int) -> str:
     pos = file.tell()
     value = file.read(length)
     file.seek(pos)
@@ -319,7 +320,7 @@ class PortError(Exception):
 
 
 class PortStub(object):
-    def __init__(self, category: str, name: str, portdir: Optional[LocalPath] = None) -> None:
+    def __init__(self, category: str, name: str, portdir: Optional[Path] = None) -> None:
         self.category = category
         self.name = name
         self._portdir = portdir
@@ -328,7 +329,7 @@ class PortStub(object):
         return "<Port: %s>" % self.origin
 
     @property
-    def portdir(self) -> LocalPath:
+    def portdir(self) -> Path:
         if self._portdir is None:
             from ports.core.ports import Ports
             return Ports.dir / self.category / self.name
@@ -361,7 +362,7 @@ class Port(PortStub):
 
     no_arch = PortVar(7, 1, "NO_ARCH")
 
-    def __init__(self, category: str, name: str, portdir: Optional[LocalPath]) -> None:
+    def __init__(self, category: str, name: str, portdir: Optional[Path]) -> None:
         self._values: Dict[PortValue, Union[str, List[str], PortObject]] = {}
         self.categories = [category]
         super().__init__(category, name, portdir)
@@ -389,7 +390,7 @@ class Port(PortStub):
         return categories
 
     @property
-    def descr(self) -> LocalPath:
+    def descr(self) -> Path:
         return self.portdir / "pkg-descr"
 
     @property
@@ -411,11 +412,11 @@ class Port(PortStub):
         port_makefile = self.portdir / "Makefile"
         metadata: List[str] = []
         if port_makefile.exists():
-            with open(port_makefile, "rU") as port_makefile:
-                for line in iter(port_makefile.readline, ""):
+            with port_makefile.open("rU") as makefile_file:
+                for line in iter(makefile_file.readline, ""):
                     if line.startswith("# Created by") or line.startswith("# $FreeBSD"):
                         metadata.append(line)
-                    if peek(port_makefile, 1) != "#":
+                    if peek(makefile_file, 1) != "#":
                         break
         else:
             metadata.append("# $FreeBSD$\n")
@@ -457,7 +458,7 @@ class Port(PortStub):
     def _gen_descr(self) -> None:
         if self.description is None:
             if self.descr.exists():
-                self.descr.remove()
+                self.descr.unlink()
         else:
             with self.descr.open("w") as descr:
                 width = 0
