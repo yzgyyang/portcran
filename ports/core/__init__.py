@@ -1,10 +1,10 @@
 """Core architecture representing the FreeBSD Ports Collection."""
-from ports.core.dependency import Dependency
-from ports.core.make import MakeDict
-from ports.core.platform import Platform
-from ports.core.port import Port, PortDepends, PortError, PortLicense, PortStub
-from ports.core.ports import Ports
-from ports.core.uses import Uses
+from .dependency import Dependency
+from .make import MakeDict
+from .platform import Platform
+from .port import Port, PortDepends, PortError, PortLicense, PortStub
+from .ports import Ports
+from .uses import Uses
 
 __all__ = [
     "Dependency",

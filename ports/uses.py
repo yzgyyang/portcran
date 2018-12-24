@@ -1,5 +1,5 @@
 from typing import Dict, Iterable, List, Tuple
-from ports.core import MakeDict, Uses
+from .core import MakeDict, Uses
 
 __all__ = ["Gnome", "PkgConfig", "ShebangFix"]
 
@@ -10,6 +10,7 @@ def create_uses(name: str) -> type:
         def __init__(self) -> None:
             super(UsesClass, self).__init__(name)
     return UsesClass
+
 
 PkgConfig = create_uses("pkgconfig")
 

@@ -1,13 +1,13 @@
-from itertools import chain
+"""The CranPort class that understands the CRAN package format."""
+from pathlib import Path
 from re import compile as re_compile
 from tarfile import TarFile
 from traceback import print_exc
 from typing import Callable, Dict, Optional, Union, cast
-from plumbum.path import LocalPath
-from ports.core import Port, PortDepends, PortError, PortStub, Ports
-from ports.cran.uses import Cran
-from ports.dependency import PortDependency
-from ports.utilities import Stream
+from .uses import Cran
+from ..core import Port, PortDepends, PortError, PortStub, Ports
+from ..dependency import PortDependency
+from ..utilities import Stream
 
 __all__ = ["CranPort"]
 
@@ -112,10 +112,11 @@ SECTION = [
 
 DEPENDENCY = re_compile(r"([\w.]+)(?:\s*\((.*)\))?")
 
-PARSE_SIGNATURE = Callable[[str, str, int], None]
+ParseSignature = Callable[[str, str, int], None]
 
 
 def extractfile(tar_file: TarFile, name: str, filtr: Callable[[str], str], line: int = 1) -> Optional[Stream]:
+    """Extract the specified file from a tarball using the specifeid filter and an optional line offset."""
     try:
         stream = tar_file.extractfile(name)
     except KeyError:
@@ -124,6 +125,7 @@ def extractfile(tar_file: TarFile, name: str, filtr: Callable[[str], str], line:
 
 
 def version_identifier(line: str) -> Optional[str]:
+    """Try extract a version string from the specified line."""
     for regex in VERSION_IDENTIFIER:
         match = regex.match(line)
         if match:
@@ -132,6 +134,7 @@ def version_identifier(line: str) -> Optional[str]:
 
 
 def section(line: str) -> bool:
+    """Determine if the specified line is a section break."""
     for regex in SECTION:
         match = regex.match(line)
         if match:
@@ -140,16 +143,28 @@ def section(line: str) -> bool:
 
 
 class CranPort(Port):
+    """Port with specified handling for CRAN packages."""
+
     class Keywords(object):
+        """A class property capable of routing keyword parsing to decorated methods."""
+
         def __init__(self) -> None:
+            """Initialise a new instance of this Keywords class."""
             self._keywords: Dict[str, Callable[[CranPort, str], None]] = {}
 
-        def __get__(self, instance: "CranPort", owner: type) -> Union["CranPort.Keywords", PARSE_SIGNATURE]:
+        def __get__(self, instance: "CranPort", owner: type) -> Union["CranPort.Keywords", ParseSignature]:
+            """
+            If requesting a class property then return this Keywords object.
+
+            If requesting an object property then return a function capable of parsing an entry in the CRAN's
+            DESCRIPTION file.
+            """
             if instance is None:
                 return self
             return lambda key, value, line: self.parse(instance, key, value, line)
 
         def keyword(self, *keywords: str) -> Callable[[Callable[["CranPort", str], None]], "CranPort.Keywords"]:
+            """Return a decorator that registers a function as parsing the specified keywords."""
             def assign(func: Callable[["CranPort", str], None]) -> "CranPort.Keywords":
                 for keyword in keywords:
                     self._keywords[keyword] = func
@@ -157,6 +172,7 @@ class CranPort(Port):
             return assign
 
         def parse(self, port: "CranPort", key: str, value: str, line: int) -> None:
+            """Parse the specified keyword from the CRAN's DESCRIPTION file."""
             if key in self._keywords:
                 self._keywords[key](port, value)
             elif key.lower() not in IGNORED_KEYS:
@@ -164,7 +180,13 @@ class CranPort(Port):
 
     _parse = Keywords()
 
-    def __init__(self, category: str, name: str, portdir: LocalPath, distfile: Optional[TarFile] = None) -> None:
+    def __init__(self, category: str, name: str, portdir: Optional[Path], distfile: Optional[TarFile] = None) -> None:
+        """
+        Initialise a new instance of the CranPort class.
+
+        The port's category and name must be specified.  Optionally the full path to the port directory and the source
+        package TarFile may be specified.
+        """
         super().__init__(category, Cran.PKGNAMEPREFIX + name, portdir)
         self.portname = name
         if distfile is not None:
@@ -180,6 +202,7 @@ class CranPort(Port):
         suggested = []
         for cran in (i.strip() for i in value.split(",")):
             depend = DEPENDENCY.match(cran)
+            assert depend is not None
             name = depend.group(1).strip()
             if name not in INTERNAL_PACKAGES:
                 try:
@@ -279,7 +302,7 @@ class CranPort(Port):
         # pylint: disable=function-redefined
         self.distversion = value
 
-    @_parse.keyword("VignetteBuilder")
+    @_parse.keyword("VignetteBuilder")  # type: ignore
     def _parse(self, value: str):
         self._add_dependency(self.depends.build, value)
 
@@ -328,13 +351,19 @@ class CranPort(Port):
                 key, value = line.split(":", 1)
                 lines = [value.strip()] + [i.strip() for i in desc.take_while(lambda l: not identifier.match(l))]
                 self._parse(key, " ".join(i for i in lines if i), desc.line)  # type: ignore
-            except PortError as e:
-                errors.append(e)
+            except PortError as ex:
+                errors.append(ex)
         if errors:
             raise PortError("\n".join(e.args[0] for e in errors))
 
     @staticmethod
-    def create(name: str, distfile: LocalPath, portdir: Optional[str] = None) -> "CranPort":
+    def create(name: str, distfile: Path, portdir: Optional[Path] = None) -> "CranPort":
+        """
+        Create a CranPort from a CRAN package tarball.
+
+        The name of the CRAN package and path to the source tarball (distfile) must be specified.  Optionally the full
+        path to the port directory may be specified.
+        """
         categories = ["math"]
         port = None
         try:
@@ -342,8 +371,6 @@ class CranPort(Port):
             categories = port.categories
         except PortError:
             pass
-        if portdir is not None:
-            portdir = LocalPath(portdir)
         cran = CranPort(categories[0], name, portdir, TarFile.open(str(distfile), "r:gz"))
         cran.categories = categories
         if port is not None:
