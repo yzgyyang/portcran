@@ -5,8 +5,8 @@ therein.
 """
 from os import environ
 from typing import Callable, ClassVar, List, Optional
+from pathlib import Path
 from plumbum import local
-from plumbum.path import LocalPath
 from .make import make_var
 from .port import Port, PortError, PortStub
 
@@ -16,15 +16,15 @@ __all__ = ["Ports", "MAKE"]
 MAKE = local[environ.get("MAKE", default="make")]
 
 
-class Ports(object):
+class Ports:
     """Representation of the FreeBSD Ports Collection."""
 
     _factories: ClassVar[List[Callable[[PortStub], Optional[Port]]]] = []
     _ports: ClassVar[List[PortStub]] = []
-    dir: ClassVar[LocalPath] = LocalPath(environ.get("PORTSDIR", "/usr/ports"))
+    dir: ClassVar[Path] = Path(environ.get("PORTSDIR", "/usr/ports"))
 
     categories = make_var(dir, "SUBDIR")
-    distdir = LocalPath(MAKE("-C", dir / "Mk", "-VDISTDIR", "-fbsd.port.mk").strip())
+    distdir = Path(MAKE("-C", dir / "Mk", "-VDISTDIR", "-fbsd.port.mk").strip())
 
     @staticmethod
     def _get_port(selector: Callable[[PortStub], bool]) -> Port:
