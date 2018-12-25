@@ -4,7 +4,7 @@ This module provides an interface to interact with the FreeBSD Ports Collection,
 therein.
 """
 from os import environ
-from typing import Callable, ClassVar, List, Optional
+from typing import Callable, ClassVar, Iterator, List, Optional
 from pathlib import Path
 from plumbum import local
 from .make import make_var
@@ -56,6 +56,11 @@ class Ports:
             print("\tLoading category: %s" % category)
             for name in make_var(Ports.dir / category, "SUBDIR"):
                 Ports._ports.append(PortStub(category, name))
+
+    @staticmethod
+    def all() -> Iterator[PortStub]:
+        """Return a sequence containing all ports."""
+        return iter(Ports._ports)
 
     @staticmethod
     def get_port_by_name(name: str) -> Port:
