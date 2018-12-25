@@ -1,7 +1,7 @@
 """Dependency architecture for a Port."""
 from abc import ABCMeta, abstractmethod
 from typing import Callable, ClassVar, List, Optional
-from ports.utilities import Orderable
+from ..utilities import Orderable
 
 __all__ = ["Dependency"]
 

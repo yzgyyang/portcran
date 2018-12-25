@@ -1,4 +1,4 @@
-from ports.cran.port import CranPort
-from ports.cran.uses import Cran
+from .port import CranPort
+from .uses import Cran
 
 __all__ = ["Cran", "CranPort"]
