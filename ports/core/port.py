@@ -7,9 +7,8 @@ from pathlib import Path
 from typing import (Any, Callable, Dict, Generic, IO, Iterable, Iterator, List, Optional, Set, Tuple, TypeVar, Union,
                     cast)
 from .dependency import Dependency
-from .make import MakeDict, make_vars
+from .make import MakeDict, make, make_vars
 from .platform import Platform
-from .ports import MAKE
 from .uses import Uses
 from ..utilities import Orderable
 
@@ -453,7 +452,7 @@ class Port(PortStub):
                 makefile.write("\n")
 
     def _gen_distinfo(self) -> None:
-        MAKE("-C", self.portdir, "makesum")
+        make(self.portdir, 'makesum')
 
     def _gen_descr(self) -> None:
         if self.description is None:
