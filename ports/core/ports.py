@@ -20,7 +20,7 @@ class Ports:
     dir: ClassVar[Path] = Path(environ.get('PORTSDIR', '/usr/ports'))
 
     categories = make_var(dir, 'SUBDIR')
-    distdir = Path(make(dir / 'Mk', '-VDISTDIR', '-fbsd.port.mk').strip())
+    distdir = Path(environ.get('DISTDIR') or make(dir / 'Mk', '-VDISTDIR', '-fbsd.port.mk').strip())
 
     @staticmethod
     def _get_port(selector: Callable[[PortStub], bool]) -> Port:
