@@ -1,9 +1,13 @@
 """The object models defining the port objects."""
+from typing import Dict, Optional, Union
 from sqlalchemy import Column, Integer, ForeignKey, String
 from sqlalchemy.orm import relationship
 from . import db
 
-__all__ = ['Patch', 'Port']
+__all__ = ['Json', 'Patch', 'Port']
+
+
+Json = Dict[str, Optional[Union[int, str]]]
 
 
 class Port(db.Model):  # pylint: disable=R0903
@@ -17,6 +21,19 @@ class Port(db.Model):  # pylint: disable=R0903
     latest_version = Column(String(16))
     origin = Column(String(256))
     patches = relationship('Patch', back_populates='port')
+
+    def as_json(self) -> Json:
+        """Return this Port as a JSON friendly dictionary object."""
+        return {
+            "id": self.id,
+            "name": self.name,
+            "version": self.version,
+            "maintainer": self.maintainer,
+            "source": self.source,
+            "latest_version": self.latest_version,
+            "origin": self.origin,
+            "patch": None,
+        }
 
 
 class Patch(db.Model):  # pylint: disable=R0903

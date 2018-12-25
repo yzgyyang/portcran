@@ -14,6 +14,7 @@ also be created.
 A port looks as follows:
 ```json
 {
+    "uri": /*URI of this port*/,
     "name": "$PORTNAME",
     "version": "$DISTVERSION",
     "maintainer": "$MAINTAINER",

@@ -7,7 +7,7 @@ __all__ = ['Config']
 class Config:  # pylint: disable=R0903
     """SqlAlchemy configuration class."""
 
-    SLQALCHEMY_DATABASE_URI = environ.get('DATABASE_URL', 'sqlite:////var/lib/pathd/app.sqlite')
+    SLQALCHEMY_DATABASE_URI = environ.get('DATABASE_URL', 'sqlite:///var/lib/pathd/app.sqlite')
 
     SLQALCHEMY_TRACK_MODIFICATIONS = False
 
