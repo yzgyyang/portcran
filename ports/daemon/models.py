@@ -17,22 +17,22 @@ class Port(db.Model):  # pylint: disable=R0903
     name = Column(String(256))
     version = Column(String(16))
     maintainer = Column(String(256))
+    origin = Column(String(256))
     source = Column(String(4))
     latest_version = Column(String(16))
-    origin = Column(String(256))
     patches = relationship('Patch', back_populates='port')
 
     def as_json(self) -> Json:
         """Return this Port as a JSON friendly dictionary object."""
         return {
-            "id": self.id,
-            "name": self.name,
-            "version": self.version,
-            "maintainer": self.maintainer,
-            "source": self.source,
-            "latest_version": self.latest_version,
-            "origin": self.origin,
-            "patch": None,
+            'id': self.id,
+            'name': self.name,
+            'version': self.version,
+            'maintainer': self.maintainer,
+            'source': self.source,
+            'latest_version': self.latest_version,
+            'origin': self.origin,
+            'patch': None,
         }
 
 

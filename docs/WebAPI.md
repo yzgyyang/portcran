@@ -18,9 +18,9 @@ A port looks as follows:
     "name": "$PORTNAME",
     "version": "$DISTVERSION",
     "maintainer": "$MAINTAINER",
+    "origin": /*directory location of port*/,
     "source": /*one of "cran", "pypi"*/,
     "latest_version": /*latest version available at source*/,
-    "origin": /*directory location of port*/,
     "patch": /*URI to patch against this port (if any)*/,
 }
 ```
