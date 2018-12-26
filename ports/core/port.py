@@ -380,6 +380,8 @@ class Port(PortStub):
 
     no_arch = PortVar(7, 1, "NO_ARCH")
 
+    wrksrc = PortVar(7, 1, "WRKSRC")
+
     def __init__(self, category: str, name: str, portdir: Optional[Path]) -> None:
         self._values: Dict[PortValue, Union[str, List[str], PortObject]] = {}
         self.categories = [category]
