@@ -1,13 +1,50 @@
 """The object models defining the port objects."""
 from typing import Dict, Optional, Union
+from flask import Flask
 from sqlalchemy import Column, Integer, ForeignKey, String
 from sqlalchemy.orm import relationship
 from . import db
+from ..core import Ports
+from ..cran import Cran
 
 __all__ = ['Json', 'Patch', 'Port']
 
 
 Json = Dict[str, Optional[Union[int, str]]]
+
+
+def sync_ports(app: Flask):
+    """Syncronise the Port database with the FreeBSD Ports Collection."""
+    ports = (
+        (Ports.get_port_by_origin(portstub.origin), 'cran') for portstub in Ports.all()
+        if portstub.name.startswith(Cran.PKGNAMEPREFIX)
+    )
+
+    with app.app_context():
+        model_ports = set(Port.query.all())
+
+        for port, source in ports:
+            match = [model_port for model_port in model_ports if model_port.origin == port.origin]
+            assert len(match) <= 1
+            if match:
+                model_port = match[0]
+                assert model_port.source == source
+                model_ports.remove(model_port)
+                for attr in ('name', 'version', 'maintainer', 'origin'):
+                    if getattr(model_port, attr) != getattr(port, attr):
+                        setattr(model_port, attr, getattr(port, attr))
+            else:
+                db.session.add(Port(
+                    name=port.name,
+                    version=port.version,
+                    maintainer=port.maintainer,
+                    origin=port.origin,
+                    source=source,
+                    latest_source=None,
+                ))
+            for model_port in model_ports:
+                db.session.remove(model_port)
+        db.session.commit()
 
 
 class Port(db.Model):  # pylint: disable=R0903
