@@ -21,7 +21,7 @@ def get_ports() -> Response:
     return jsonify(ports)
 
 
-@bp.route('/api/ports/<port_id:int>', methods=['GET'])
+@bp.route('/api/ports/<int:port_id>', methods=['GET'])
 def get_port(port_id: int) -> Response:
     """Get a port by the specified port identification number."""
     ports = Port.query.filter_by(id=port_id)
