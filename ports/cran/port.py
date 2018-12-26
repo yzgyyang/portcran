@@ -226,12 +226,7 @@ class CranPort(Port):
         if port.name.startswith(Cran.PKGNAMEPREFIX):
             portname = port.name[len(Cran.PKGNAMEPREFIX):]
             port = CranPort(port.category, portname, port.portdir)
-            try:
-                port.load()
-            except AssertionError:
-                # TODO: remove once all R-cran ports have been verified
-                print("Unable to load CranPort:", port.name)
-                print_exc()
+            port.load()
             assert port.portname == portname
             assert port.distname in ("${PORTNAME}_${DISTVERSION}", "${PORTNAME}_${PORTVERSION}")
             assert Cran in port.uses
