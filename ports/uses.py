@@ -1,48 +1,35 @@
 from typing import Dict, Iterable, List, Tuple
 from .core import MakeDict, Uses
 
-__all__ = ['Gnome', 'MySQL', 'PgSQL', 'PkgConfig', 'ShebangFix']
+__all__ = ['Gnome', 'MySQL', 'Perl5', 'PgSQL', 'PkgConfig', 'ShebangFix']
 
 
-def create_uses(name: str) -> type:
+def create_uses(name: str, use=False) -> type:
     @Uses.register(name)
     class UsesClass(Uses):
         def __init__(self) -> None:
             super(UsesClass, self).__init__(name)
+            if use:
+                self.components: List[str] = []
+
+        if use:
+            use_name = 'USE_%s' % name.upper() if use else ''
+
+            def generate(self) -> Iterable[Tuple[str, Iterable[str]]]:
+                if self.components:
+                    yield (self.use_name, self.components)
+
+            def load(self, variables: MakeDict) -> None:
+                self.components = variables.pop(self.use_name, default=[])
+
     return UsesClass
 
 
+Gnome = create_uses('gnome', use=True)
 MySQL = create_uses('mysql')
+Perl5 = create_uses('perl5', use=True)
 PgSQL = create_uses('pgsql')
 PkgConfig = create_uses('pkgconfig')
-
-
-@Uses.register('gnome')
-class Gnome(Uses):
-    def __init__(self) -> None:
-        super(Gnome, self).__init__('gnome')
-        self.components: List[str] = []
-
-    def generate(self) -> Iterable[Tuple[str, Iterable[str]]]:
-        if self.components:
-            yield ('USE_GNOME', self.components)
-
-    def load(self, variables: MakeDict) -> None:
-        self.components = variables.pop('USE_GNOME', default=[])
-
-
-@Uses.register('perl5')
-class Perl5(Uses):
-    def __init__(self) -> None:
-        super(Perl5, self).__init__('perl5')
-        self.components: List[str] = []
-
-    def generate(self) -> Iterable[Tuple[str, Iterable[str]]]:
-        if self.components:
-            yield ('USE_PERL5', self.components)
-
-    def load(self, variables: MakeDict) -> None:
-        self.components = variables.pop('USE_PERL5', default=[])
 
 
 @Uses.register('shebangfix')
