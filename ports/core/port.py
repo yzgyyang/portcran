@@ -4,8 +4,7 @@ from io import StringIO
 from itertools import groupby
 from math import ceil, floor
 from pathlib import Path
-from typing import (Any, Callable, Dict, Generic, IO, Iterable, Iterator, List, Optional, Set, Tuple, TypeVar, Union,
-                    cast)
+from typing import Any, Callable, Dict, Generic, IO, Iterable, Iterator, List, Optional, Tuple, TypeVar, Union, cast
 from .dependency import Dependency
 from .make import MakeDict, make, make_vars
 from .platform import Platform
@@ -143,30 +142,50 @@ class PortObj(PortValue[T2]):  # pylint: disable=E1136
 
 
 class PortLicense(PortObject, Iterable[str]):
+    class Definition:
+        def __init__(self, name: str, file: Optional[str], perms: List[str]):
+            self.name = name
+            self.file = file
+            self.perms = perms
+
     def __init__(self) -> None:
         super().__init__()
-        self._licenses: Set[str] = set()
+        self._licenses: Dict[str, Optional['PortLicense.Definition']] = {}
         self.combination: Optional[str] = None
         self.file: Optional[str] = None
 
     def __iter__(self) -> Iterator[str]:
         return iter(self._licenses)
 
-    def add(self, license_type: str) -> "PortLicense":
-        self._licenses.add(license_type)
+    def add(self, license_type: str, license_definition: Optional[Definition] = None) -> "PortLicense":
+        self._licenses[license_type] = license_definition
         return self
 
     def generate(self) -> Iterable[Tuple[str, Iterable[str]]]:
-        yield ("LICENSE", sorted(self._licenses))
+        license_types = sorted(self._licenses)
+        yield ("LICENSE", license_types)
         if self.combination is not None:
             yield ("LICENSE_COMB", (self.combination,))
         if self.file is not None:
             yield ("LICENSE_FILE", (self.file,))
+        for license_type in license_types:
+            license_definition = self._licenses[license_type]
+            if license_definition is not None:
+                yield ("LICENSE_NAME_%s" % license_type, (license_definition.name,))
+                if license_definition.file is not None:
+                    yield ("LICENSE_FILE_%s" % license_type, (license_definition.file,))
+                yield ("LICENSE_PERMS_%s" % license_type, license_definition.perms)
 
     def load(self, variables: MakeDict) -> None:
         if "LICENSE" in variables:
             for license_type in variables.pop("LICENSE"):
-                self.add(license_type)
+                license_definition = None
+                name = variables.pop_value("LICENSE_NAME_%s" % license_type, combine=True, default=None)
+                if name is not None:
+                    file = variables.pop_value("LICENSE_FILE_%s" % license_type, default=None)
+                    perms = variables.pop("LICENSE_PERMS_%s" % license_type)
+                    license_definition = PortLicense.Definition(name, file, perms)
+                self.add(license_type, license_definition)
             self.combination = variables.pop_value("LICENSE_COMB", default=None)
             self.file = variables.pop_value("LICENSE_FILE", default=None)
 
