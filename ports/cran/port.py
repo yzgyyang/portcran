@@ -2,7 +2,6 @@
 from pathlib import Path
 from re import compile as re_compile
 from tarfile import TarFile
-from traceback import print_exc
 from typing import Callable, Dict, Optional, Union, cast
 from .uses import Cran
 from ..core import Port, PortDepends, PortError, PortStub, Ports
@@ -236,7 +235,7 @@ class CranPort(Port):
     def _gen_plist(self) -> None:
         pkg_plist = self.portdir / "pkg-plist"
         if pkg_plist.exists():
-            pkg_plist.delete()
+            pkg_plist.unlink()
 
     @_parse.keyword("Depends", "Imports")
     def _parse(self, value: str) -> None:
