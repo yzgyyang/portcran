@@ -22,6 +22,8 @@ def create_app(config_class=Config) -> Flask:
 
     app.register_blueprint(bp)
 
-    sync_ports(app)
+    with app.app_context():
+        db.create_all()
+        sync_ports()
 
     return app
