@@ -56,6 +56,8 @@ class Ports:
     @staticmethod
     def all() -> Iterator[PortStub]:
         """Return a sequence containing all ports."""
+        if not Ports._ports:
+            Ports._load_ports()
         return iter(Ports._ports)
 
     @staticmethod
