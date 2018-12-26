@@ -1,12 +1,12 @@
 from re import compile as re_compile
-from typing import Optional
+from typing import ClassVar, Optional, Pattern
 from .core import Dependency
 
 __all__ = ['BinDependency', 'LibDependency', 'LocalBaseDependency', 'PortDependency']
 
 
 class BinDependency(Dependency):
-    pattern = re_compile(r'([0-9a-zA-Z_.-]+)')
+    pattern: ClassVar[Pattern[str]] = re_compile(r'([0-9a-zA-Z_.-]+)')
 
     def __init__(self, binname: str, origin: str) -> None:
         super().__init__(origin)
@@ -25,7 +25,7 @@ class BinDependency(Dependency):
 
 
 class LibDependency(Dependency):
-    pattern = re_compile(r'lib(.*).so')
+    pattern: ClassVar[Pattern[str]] = re_compile(r'lib(.*).so')
 
     def __init__(self, libname: str, origin: str) -> None:
         super().__init__(origin)
@@ -44,7 +44,7 @@ class LibDependency(Dependency):
 
 
 class LocalBaseDependency(Dependency):
-    pattern = re_compile(r'\${LOCALBASE}/(.*)')
+    pattern: ClassVar[Pattern[str]] = re_compile(r'\${LOCALBASE}/(.*)')
 
     def __init__(self, path: str, origin: str) -> None:
         super().__init__(origin)
@@ -63,7 +63,7 @@ class LocalBaseDependency(Dependency):
 
 
 class PortDependency(Dependency):
-    pattern = re_compile(r'(.*)((?:>=|>).*)')
+    pattern: ClassVar[Pattern[str]] = re_compile(r'(.*)((?:>=|>).*)')
 
     def __init__(self, pkgname: str, condition: str, origin: str) -> None:
         super().__init__(origin)
