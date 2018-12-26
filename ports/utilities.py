@@ -8,14 +8,14 @@ class Orderable(object, metaclass=ABCMeta):
     # pylint: disable=too-few-public-methods
     def __eq__(self, other: object) -> bool:
         assert isinstance(other, Orderable)
-        return bool(self._key() == other._key)  # pylint: disable=W0212
+        return bool(self._key == other._key)  # pylint: disable=W0212
 
     def __hash__(self) -> int:
         return hash(self._key)
 
     def __lt__(self, other: object) -> bool:
         assert isinstance(other, Orderable)
-        return bool(self._key() < other._key)  # pylint: disable=W0212
+        return bool(self._key < other._key)  # pylint: disable=W0212
 
     def __ne__(self, other: object) -> bool:
         """Determine if this object is not equal to the specified object."""
