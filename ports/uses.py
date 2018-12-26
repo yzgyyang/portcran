@@ -31,6 +31,20 @@ class Gnome(Uses):
         self.components = variables.pop('USE_GNOME', default=[])
 
 
+@Uses.register('perl5')
+class Perl5(Uses):
+    def __init__(self) -> None:
+        super(Perl5, self).__init__('perl5')
+        self.components: List[str] = []
+
+    def generate(self) -> Iterable[Tuple[str, Iterable[str]]]:
+        if self.components:
+            yield ('USE_PERL5', self.components)
+
+    def load(self, variables: MakeDict) -> None:
+        self.components = variables.pop('USE_PERL5', default=[])
+
+
 @Uses.register('shebangfix')
 class ShebangFix(Uses):
     def __init__(self) -> None:
