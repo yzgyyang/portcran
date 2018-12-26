@@ -1,13 +1,21 @@
 """Simple representation of a bmake(1) Makefile."""
 from collections import OrderedDict
 from pathlib import Path
+from os import environ
 from re import compile as re_compile
+from subprocess import check_output
 from typing import Dict, Iterable, List, Optional, Set, Union
 from ..utilities import Stream
 
 __all__ = ["MakeDict", "make_var", "make_vars"]
 
+MAKE_CMD = environ.get("MAKE", default="make")
+
 VARIABLE_ASSIGNMENT = re_compile(r"^\s*(\w+)\s*([+?:]?)=(.*)$")
+
+
+def make(path: Path, *args: str) -> str:
+    return check_output((MAKE_CMD, '-C', str(path)) + args, text=True)
 
 
 def make_var(path: Path, var: str) -> List[str]:
