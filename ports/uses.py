@@ -1,7 +1,7 @@
 from typing import Dict, Iterable, List, Tuple
 from .core import MakeDict, Uses
 
-__all__ = ['Gnome', 'MySQL', 'PkgConfig', 'ShebangFix']
+__all__ = ['Gnome', 'MySQL', 'PgSQL', 'PkgConfig', 'ShebangFix']
 
 
 def create_uses(name: str) -> type:
@@ -13,6 +13,7 @@ def create_uses(name: str) -> type:
 
 
 MySQL = create_uses('mysql')
+PgSQL = create_uses('pgsql')
 PkgConfig = create_uses('pkgconfig')
 
 
