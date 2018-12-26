@@ -1,14 +1,14 @@
 """The daemon for interacting with ports through a WebAPI."""
 from typing import List, Tuple
-from flask import Flask
+from flask import Blueprint, Flask
 from flask_sqlalchemy import SQLAlchemy
 from .config import Config
-from .routes import define_routes
 from ..core import Port, Ports
 from ..cran import Cran
 
-__all__ = ['create_app', 'db']
+__all__ = ['create_app', 'bp', 'db']
 
+bp = Blueprint('portd', __name__)  # pylint: disable=C0103
 
 db = SQLAlchemy()  # pylint: disable=C0103
 
@@ -49,14 +49,15 @@ def sync_ports():
 
 def create_app() -> Flask:
     """Create a WebAPI Flask Application for portd."""
+    from . import routes
+
     app = Flask(__name__)
     app.config.from_object(Config)
+
     db.init_app(app)
-    db.create_all()
-    define_routes(app)
+
+    app.register_blueprint(bp)
+
     sync_ports()
+
     return app
-
-
-if __name__ == '__main__':
-    create_app().run()
