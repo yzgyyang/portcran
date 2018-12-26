@@ -4,7 +4,7 @@ from pathlib import Path
 from os import environ
 from re import compile as re_compile
 from subprocess import check_output
-from typing import Dict, Iterable, List, Optional, Set, Union
+from typing import Dict, Iterable, List, Optional, Set
 from ..utilities import Stream
 
 __all__ = ["MakeDict", "make_var", "make_vars"]
@@ -134,23 +134,20 @@ class MakeDict:
             self._internal.remove(name)
         return values
 
-    def pop_value(self, name: str, **kwargs: Optional[Union[str, bool]]) -> Optional[str]:
+    def pop_value(self, name: str, combine=False, **kwargs: Optional[str]) -> Optional[str]:
         """
         Pop the specified variable from this collection as a single string.
 
         If the keyword "default" is passed then that value, a string, is returns if the specified variable does not
         exist in this collection.
 
-        By default the variable is expected to contain a single value.  However, if the keyword "combine" is passed
-        with a value of `True` then values are combined into a single string using a single space as the combining
-        seperator.
+        By default the variable is expected to contain a single value.  However, if "combine" is set to a value of
+        `True` then values are combined into a single string using a single space as the combining seperator.
         """
         if "default" in kwargs and name not in self:
-            assert kwargs["default"] is None or isinstance(kwargs["default"], str)
             return kwargs["default"]
         values = self.pop(name)
-        if "combine" in kwargs and kwargs["combine"] is True:
-            assert isinstance(kwargs["combine"], bool)
+        if combine:
             value = " ".join(values)
         else:
             assert len(values) == 1
