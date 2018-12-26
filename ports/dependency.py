@@ -19,7 +19,7 @@ class BinDependency(Dependency):
     @Dependency.factory
     def _create(target: str, origin: str) -> Optional[Dependency]:
         condition = BinDependency.pattern.fullmatch(target)
-        if condition is not None:
+        if condition is not None and LibDependency.pattern.fullmatch(target) is None:
             return BinDependency(condition.group(1), origin)
         return None
 
