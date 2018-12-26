@@ -8,7 +8,7 @@ from . import bp
 def as_json(port: Port) -> Json:
     """Convert the specified Port into a JSON structure."""
     json = port.as_json()
-    json["uri"] = url_for('portd.get_port', port_id=json.pop('id'), external=True)
+    json["uri"] = url_for('portd.get_port', port_id=json.pop('id'), _external=True)
     return json
 
 
@@ -24,7 +24,7 @@ def get_ports() -> Response:
 @bp.route('/api/ports/<int:port_id>', methods=['GET'])
 def get_port(port_id: int) -> Response:
     """Get a port by the specified port identification number."""
-    ports = Port.query.filter_by(id=port_id)
+    ports = Port.query.filter_by(id=port_id).all()
     if not ports:
         abort(404)
-    return ports.single()
+    return jsonify(as_json(ports[0]))

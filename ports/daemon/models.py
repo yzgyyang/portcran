@@ -25,17 +25,22 @@ def sync_ports():
     model_ports = set(Port.query.all())
 
     for port, source in ports:
-        print(port, source)
-        match = [model_port for model_port in model_ports if model_port.origin == port.origin]
+        match = [
+            model_port for model_port in model_ports
+            if model_port.name == port.name and model_port.source == source
+        ]
         assert len(match) <= 1
         if match:
             model_port = match[0]
             assert model_port.source == source
             model_ports.remove(model_port)
             for attr in ('name', 'version', 'maintainer', 'origin'):
-                if getattr(model_port, attr) != getattr(port, attr):
-                    setattr(model_port, attr, getattr(port, attr))
+                value = getattr(port, attr)
+                if getattr(model_port, attr) != value:
+                    setattr(model_port, attr, value)
+                    print('%s (%s): update %s to \'%s\'' % (port.name, source, attr, value))
         else:
+            print('%s (%s): add port' % (port.name, source))
             db.session.add(Port(
                 name=port.name,
                 version=port.version,
@@ -45,6 +50,7 @@ def sync_ports():
                 latest_version=None,
             ))
         for model_port in model_ports:
+            print('%s (%s): remove port' % (port.nsme, source))
             db.session.remove(model_port)
     db.session.commit()
 
