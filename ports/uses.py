@@ -1,3 +1,4 @@
+"""Classes representing USES directives."""
 from typing import Dict, Iterable, List, Tuple
 from .core import MakeDict, Uses
 from .cran import Cran
@@ -6,8 +7,15 @@ __all__ = ['Cran', 'Gnome', 'MySQL', 'Perl5', 'PgSQL', 'PkgConfig', 'ShebangFix'
 
 
 def create_uses(name: str, use=False) -> type:
+    """
+    Create a simple Uses based class for the specified name.
+
+    If 'use' is set to `True` then the class will also recognise 'USE_${name:tu}' variables , called components.
+    """
     @Uses.register(name)
     class UsesClass(Uses):
+        """Generic simple Uses class, see create_uses."""
+
         def __init__(self) -> None:
             super(UsesClass, self).__init__(name)
             if use:
@@ -36,12 +44,16 @@ SSL = create_uses('ssl')
 
 @Uses.register('shebangfix')
 class ShebangFix(Uses):
+    """Uses class for 'shebangfix'."""
+
     def __init__(self) -> None:
+        """Initialise a new instance of the ShebangFix class."""
         super(ShebangFix, self).__init__('shebangfix')
         self.files: List[str] = []
         self.languages: Dict[str, Tuple[str, str]] = {}
 
     def generate(self) -> Iterable[Tuple[str, Iterable[str]]]:
+        """Return the variables defining the 'shebangfix' uses."""
         if self.files:
             yield ('SHEBANG_FILES', self.files)
         if self.languages:
@@ -52,6 +64,7 @@ class ShebangFix(Uses):
                 yield ('%s_CMD' % lang, (new_cmd,))
 
     def load(self, variables: MakeDict) -> None:
+        """Load the variables defining the 'shebangfix' uses."""
         self.files = variables.pop('SHEBANG_FILES', default=[])
         for lang in variables.pop('SHEBANG_LANG', default=[]):
             old_cmd = variables.pop_value('%s_OLD_CMD' % lang)
