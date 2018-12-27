@@ -1,7 +1,6 @@
 """Portd daemon."""
-from cProfile import Profile
 from os import environ
-from pstats import Stats
+import yappi
 
 if __name__ == '__main__':
     environ['DISTDIR'] = '/tmp'
@@ -9,10 +8,10 @@ if __name__ == '__main__':
     environ['MAKE'] = 'bmake'
     environ['PORTSDIR'] = '/Users/davidnaylor/Projects/ports'
     from ports.daemon import create_app
-    p = Profile()
-    p.enable()
+    yappi.start()
     try:
         create_app()
     finally:
-        p.disable()
-        Stats(p).sort_stats('cumulative').print_stats(30)
+        yappi.stop()
+        yappi.get_func_stats().save('callgrind.out', 'CALLGRIND')
+        yappi.clear_stats()
