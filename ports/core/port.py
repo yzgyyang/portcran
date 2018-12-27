@@ -63,9 +63,8 @@ class PortVar(PortValue[Optional[str]]):  # pylint: disable=E1136
             if instance.has_value(self):
                 return cast(str, instance.get_value(self))
             return None
-        else:
-            assert len(value) == 1 and isinstance(value[0], str)
-            return value[0]
+        assert len(value) == 1 and isinstance(value[0], str)
+        return value[0]
 
     def __set__(self, obj: "Port", value: str) -> None:
         obj.set_value(self, value)
@@ -368,6 +367,7 @@ class Port(PortStub):
     distversion = PortVar(1, 4, "DISTVERSION")
     portrevision = PortVar(1, 6, "PORTREVISION")
     categories = PortVarList(1, 8, "CATEGORIES")
+    master_sites = PortVarList(1, 9, "MASTER_SITES")
     pkgnameprefix = PortVar(1, 12, "PKGNAMEPREFIX")
     distname = PortVar(1, 14, "DISTNAME")
 
