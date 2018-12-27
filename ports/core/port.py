@@ -71,7 +71,7 @@ class PortVar(PortValue[Optional[str]]):  # pylint: disable=E1136
 
     def generate(self, value: Union[str, List[str], "PortObject"]) -> Iterable[Tuple[str, Iterable[str]]]:
         assert isinstance(value, str)
-        return (self.name, (value,)),
+        return ((self.name, (value,)),)
 
     def load(self, obj: "Port", variables: MakeDict) -> None:
         if self.name in variables:
@@ -100,7 +100,7 @@ class PortVarList(PortValue[List[str]]):  # pylint: disable=E1136
 
     def generate(self, value: Union[str, List[str], "PortObject"]) -> Iterable[Tuple[str, Iterable[str]]]:
         assert isinstance(value, list)
-        return (self.name, value),
+        return ((self.name, value),)
 
     def load(self, obj: "Port", variables: MakeDict) -> None:
         if self.name in variables:

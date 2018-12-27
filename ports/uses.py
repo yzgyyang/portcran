@@ -2,7 +2,7 @@ from typing import Dict, Iterable, List, Tuple
 from .core import MakeDict, Uses
 from .cran import Cran
 
-__all__ = ['Cran', 'Gnome', 'MySQL', 'Perl5', 'PgSQL', 'PkgConfig', 'ShebangFix']
+__all__ = ['Cran', 'Gnome', 'MySQL', 'Perl5', 'PgSQL', 'PkgConfig', 'ShebangFix', 'SSL']
 
 
 def create_uses(name: str, use=False) -> type:
@@ -31,6 +31,7 @@ MySQL = create_uses('mysql')
 Perl5 = create_uses('perl5', use=True)
 PgSQL = create_uses('pgsql')
 PkgConfig = create_uses('pkgconfig')
+SSL = create_uses('ssl')
 
 
 @Uses.register('shebangfix')
