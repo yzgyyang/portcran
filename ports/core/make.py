@@ -11,7 +11,7 @@ __all__ = ["MakeDict", "make_var", "make_vars"]
 
 MAKE_CMD = environ.get("MAKE", default="make")
 
-VARIABLE_ASSIGNMENT = re_compile(r"^\s*(\w+)\s*([+?:]?)=\s*(.*)$")
+VARIABLE_ASSIGNMENT = re_compile(r'^(\w+)\s*([+?:]?)=\s*(.*)$')
 
 
 def make(path: Path, *args: str) -> str:
@@ -27,12 +27,18 @@ def make_vars(path: Path) -> "MakeDict":
     """Return an object representing the variables from the Makefile in the specified path."""
     variables = MakeDict()
     with open(path / "Makefile", "r") as makefile:
-        data = Stream(makefile.readlines(), lambda x: x.split("#", 2)[0].rstrip())
-        while True:
-            lines = data.take_while(lambda x: x.endswith("\\"), inclusive=True)
-            if not lines:
-                break
-            var = VARIABLE_ASSIGNMENT.search(" ".join(line.rstrip("\\") for line in lines))
+        line_splits = []
+        for line in (line.split('#', 2)[0].strip() for line in makefile.readlines()):
+            if line.endswith('\\'):
+                line_splits.append(line[:-1])
+                continue
+            if line_splits:
+                line_splits.append(line)
+                line = ' '.join(line_splits)
+                line_splits.clear()
+            if not line:
+                continue
+            var = VARIABLE_ASSIGNMENT.search(line)
             if var is not None:
                 name = var.group(1)
                 modifier = var.group(2)
@@ -47,6 +53,7 @@ def make_vars(path: Path) -> "MakeDict":
                 else:
                     assert not modifier
                     variables.set(name, values)
+        assert not line_splits
     return variables
 
 
