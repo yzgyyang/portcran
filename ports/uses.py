@@ -1,7 +1,8 @@
 from typing import Dict, Iterable, List, Tuple
 from .core import MakeDict, Uses
+from .cran import Cran
 
-__all__ = ['Gnome', 'MySQL', 'Perl5', 'PgSQL', 'PkgConfig', 'ShebangFix']
+__all__ = ['Cran', 'Gnome', 'MySQL', 'Perl5', 'PgSQL', 'PkgConfig', 'ShebangFix']
 
 
 def create_uses(name: str, use=False) -> type:

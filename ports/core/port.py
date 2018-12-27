@@ -4,7 +4,9 @@ from io import StringIO
 from itertools import groupby
 from math import ceil, floor
 from pathlib import Path
-from typing import Any, Callable, Dict, Generic, IO, Iterable, Iterator, List, Optional, Tuple, TypeVar, Union, cast
+from typing import (
+    Any, Callable, ClassVar, Dict, Generic, IO, Iterable, Iterator, List, Optional, Tuple, TypeVar, Union, cast
+)
 from .dependency import Dependency
 from .make import MakeDict, make, make_vars
 from .platform import Platform
@@ -359,6 +361,8 @@ class PortStub(object):
 
 
 class Port(PortStub):
+    _load_hacks: ClassVar[List[Callable[['Port', MakeDict], None]]] = []
+
     portname = PortVar(1, 1, "PORTNAME")
     portversion = PortVar(1, 2, "PORTVERSION")
     distversion = PortVar(1, 4, "DISTVERSION")
@@ -381,6 +385,8 @@ class Port(PortStub):
     no_arch = PortVar(7, 1, "NO_ARCH")
 
     wrksrc = PortVar(7, 1, "WRKSRC")
+
+    ldflags = PortVar(8, 1, "LDFLAGS")
 
     def __init__(self, category: str, name: str, portdir: Optional[Path]) -> None:
         self._values: Dict[PortValue, Union[str, List[str], PortObject]] = {}
@@ -423,6 +429,11 @@ class Port(PortStub):
             return self.distversion
         assert self.portversion is not None
         return self.portversion
+
+    @staticmethod
+    def load_hack(load_hack: Callable[['Port', MakeDict], None]) -> Callable[['Port', MakeDict], None]:
+        Port._load_hacks.append(load_hack)
+        return load_hack
 
     @staticmethod
     def _gen_footer(makefile: StringIO) -> None:
@@ -524,6 +535,8 @@ class Port(PortStub):
                 if isinstance(var, PortValue):
                     var.load(self, variables)
             i += 1
+        for load_hack in Port._load_hacks:
+            load_hack(self, variables)
         if not variables.all_popped:
             # TODO: remove once all R-cran ports have been verified
             print("Unloaded variables for %s:" % self.name, variables)
