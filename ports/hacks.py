@@ -12,9 +12,10 @@ def gnome(port: Port, variables: MakeDict) -> None:
 
 
 @Port.load_hack
-def mvtnorm(port: Port, variables: MakeDict) -> None:
+def mvtnorm(port: Port, variables: MakeDict) -> None:  # pylint: disable=W0613
     """Handle bad DISTNAME for CRAN port mvtnorm."""
     if port.name == 'R-cran-mvtnorm':
+        assert port.portversion is not None
         port.distversion = port.portversion
         port.distname = '${PORTNAME}_${DISTVERSION}'
         del port.portversion
