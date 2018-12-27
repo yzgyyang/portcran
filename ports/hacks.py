@@ -1,6 +1,7 @@
 """Special handling of FreeBSD Port variables."""
 from .core.make import MakeDict
 from .core import Port
+from .cran import CranPort
 from .uses import Gnome
 
 
@@ -12,10 +13,10 @@ def gnome(port: Port, variables: MakeDict) -> None:
 
 
 @Port.load_hack
-def mvtnorm(port: Port, variables: MakeDict) -> None:  # pylint: disable=W0613
+def cran_distname(port: Port, variables: MakeDict) -> None:  # pylint: disable=W0613
     """Handle bad DISTNAME for CRAN port mvtnorm."""
-    if port.name == 'R-cran-mvtnorm':
-        assert port.portversion is not None
-        port.distversion = port.portversion
+    if isinstance(port, CranPort) and port.distname not in ('${PORTNAME}_${DISTVERSION}', '${PORTNAME}_${PORTVERSION}'):
+        if port.portversion is not None:
+            port.distversion = port.portversion
+            del port.portversion
         port.distname = '${PORTNAME}_${DISTVERSION}'
-        del port.portversion
