@@ -114,13 +114,15 @@ DEPENDENCY = re_compile(r"([\w.]+)(?:\s*\((.*)\))?")
 ParseSignature = Callable[[str, str, int], None]
 
 
-def extractfile(tar_file: TarFile, name: str, filtr: Callable[[str], str], line: int = 1) -> Optional[Stream]:
+def extractfile(tar_file: TarFile, name: str, filtr: Callable[[str], str], start_line: int = 0) -> Optional[Stream]:
     """Extract the specified file from a tarball using the specifeid filter and an optional line offset."""
     try:
         stream = tar_file.extractfile(name)
+        if stream is None:
+            return None
+        return Stream((line.decode('utf-8') for line in stream.readlines()), filtr, start_line)
     except KeyError:
         return None
-    return None if stream is None else Stream((line.decode('utf-8') for line in stream.readlines()), filtr, line)
 
 
 def version_identifier(line: str) -> Optional[str]:
@@ -144,7 +146,7 @@ def section(line: str) -> bool:
 class CranPort(Port):
     """Port with specified handling for CRAN packages."""
 
-    class Keywords(object):
+    class Keywords:
         """A class property capable of routing keyword parsing to decorated methods."""
 
         def __init__(self) -> None:
@@ -302,7 +304,7 @@ class CranPort(Port):
 
     def _load_changelog(self, distfile: TarFile) -> None:
         for name in ("ChangeLog", "NEWS"):
-            changelog = extractfile(distfile, "%s/%s" % (self.portname, name), lambda x: x.strip(), line=0)
+            changelog = extractfile(distfile, "%s/%s" % (self.portname, name), lambda x: x.strip())
             if changelog is not None:
                 break
         else:
@@ -335,7 +337,7 @@ class CranPort(Port):
                 break
 
     def _load_descr(self, distfile: TarFile) -> None:
-        desc = extractfile(distfile, "%s/DESCRIPTION" % self.portname, lambda x: x.rstrip('\n'))
+        desc = extractfile(distfile, "%s/DESCRIPTION" % self.portname, lambda x: x.rstrip('\n'), start_line=1)
         if desc is None:
             raise NameError("CRAN '%s' package missing DESCRIPTION file")
         identifier = re_compile(r"^[a-zA-Z/@]+:")

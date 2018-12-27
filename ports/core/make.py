@@ -11,7 +11,7 @@ __all__ = ["MakeDict", "make_var", "make_vars"]
 
 MAKE_CMD = environ.get("MAKE", default="make")
 
-VARIABLE_ASSIGNMENT = re_compile(r"^\s*(\w+)\s*([+?:]?)=(.*)$")
+VARIABLE_ASSIGNMENT = re_compile(r"^\s*(\w+)\s*([+?:]?)=\s*(.*)$")
 
 
 def make(path: Path, *args: str) -> str:
@@ -29,7 +29,7 @@ def make_vars(path: Path) -> "MakeDict":
     with open(path / "Makefile", "r") as makefile:
         data = Stream(makefile.readlines(), lambda x: x.split("#", 2)[0].rstrip())
         while True:
-            lines = list(data.take_while(lambda x: x.endswith("\\"), inclusive=True))
+            lines = data.take_while(lambda x: x.endswith("\\"), inclusive=True)
             if not lines:
                 break
             var = VARIABLE_ASSIGNMENT.search(" ".join(line.rstrip("\\") for line in lines))

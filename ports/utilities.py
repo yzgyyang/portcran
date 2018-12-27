@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractproperty
-from typing import Any, Callable, Iterable, Iterator
+from typing import Any, Callable, Iterable, Iterator, Optional
 
 __all__ = ["Orderable", "Stream"]
 
@@ -26,27 +26,33 @@ class Orderable(object, metaclass=ABCMeta):
         raise NotImplementedError()
 
 
-class Stream(Iterator[str]):
-    # pylint: disable=too-few-public-methods
-    def __init__(self, objects: Iterable[str], filtr: Callable[[str], str] = lambda x: x, line: int = 1) -> None:
-        self._objects = list(objects)
-        self._filter = filtr
-        self.line = line
+class Stream(Iterator[str]):  # pylint: disable=too-few-public-methods
+    def __init__(self, lines: Iterable[str], filtr: Optional[Callable[[str], str]] = None, start_line: int = 0) -> None:
+        if filtr is None:
+            self._lines = lines if isinstance(lines, list) else list(lines)
+        else:
+            self._lines = [filtr(line) for line in lines]
+        self._len = len(self._lines)
+        self.start_line = start_line
+        self.line = start_line
 
     def __iter__(self) -> Iterator[str]:
-        return self
+        return Stream(self._lines, start_line=self.start_line)
 
     def __next__(self) -> str:
-        if 0 <= self.line < len(self._objects):
+        if 0 <= self.line < self._len:
+            line = self._lines[self.line]
             self.line += 1
-            return self._filter(self._objects[self.line - 1])
+            return line
         raise StopIteration
 
-    def take_while(self, condition: Callable[[str], bool], inclusive: bool = False) -> Iterator[str]:
-        for value in self:
-            if not inclusive and not condition(value):
-                self.line -= 1
+    def take_while(self, condition: Callable[[str], bool], inclusive: bool = False) -> Iterable[str]:
+        lines = []
+        for line in self._lines[self.line:]:
+            if not inclusive and not condition(line):
                 break
-            yield value
-            if inclusive and not condition(value):
+            lines.append(line)
+            if inclusive and not condition(line):
                 break
+        self.line += len(lines)
+        return lines
