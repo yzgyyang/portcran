@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
-from distutils.core import exit, setup
+from distutils.core import setup
 from sys import version_info
 
-if sys.version_info < (3, 6):
+if version_info < (3, 6):
     exit("Python version >= 3.6 required")
 
 setup(
